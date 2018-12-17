@@ -14,6 +14,8 @@ import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.deeplearning4j.optimize.solvers.accumulation.EncodedGradientsAccumulator;
+import org.deeplearning4j.optimize.solvers.accumulation.encoding.ThresholdAlgorithm;
+import org.deeplearning4j.optimize.solvers.accumulation.encoding.threshold.AdaptiveThresholdAlgorithm;
 import org.deeplearning4j.optimize.solvers.accumulation.encoding.threshold.FixedThresholdAlgorithm;
 import org.deeplearning4j.parallelism.ParallelWrapper;
 import org.deeplearning4j.parallelism.factory.SymmetricTrainerContext;
@@ -39,17 +41,15 @@ import org.slf4j.LoggerFactory;
 public class GradientsSharingLenetMnistExample {
     private static final Logger log = LoggerFactory.getLogger(GradientsSharingLenetMnistExample.class);
 
+    public static int nChannels = 1;
+    public static int outputNum = 10;
+
+    // for GPU you usually want to have higher batchSize
+    public static int batchSize = 128;
+    public static int nEpochs = 2;
+    public static int seed = 123;
+
     public static void main(String[] args) throws Exception {
-        // PLEASE NOTE: For CUDA FP16 precision support is available
-        Nd4j.setDataType(DataBuffer.Type.HALF);
-
-        int nChannels = 1;
-        int outputNum = 10;
-
-        // for GPU you usually want to have higher batchSize
-        int batchSize = 128;
-        int nEpochs = 10;
-        int seed = 123;
 
         log.info("Load data....");
         DataSetIterator mnistTrain = new MnistDataSetIterator(batchSize,true,12345);
@@ -97,7 +97,7 @@ public class GradientsSharingLenetMnistExample {
 
         // ParallelWrapper will take care of load balancing between GPUs.
         ParallelWrapper wrapper = new ParallelWrapper.Builder(model)
-            // DataSets prefetching options. Set this value with respect to number of actual devices
+            // DataSets prefetching options. Set this value proportional to number of actual devices
             .prefetchBuffer(24)
 
             // set number of workers equal to number of available devices. x1-x2 are good values to start with
@@ -105,9 +105,9 @@ public class GradientsSharingLenetMnistExample {
 
             .trainerFactory(new SymmetricTrainerContext())
 
-            .trainingMode(ParallelWrapper.TrainingMode.CUSTOM)
+            .trainingMode(ParallelWrapper.TrainingMode.SHARED_GRADIENTS)
 
-            .gradientsAccumulator(new EncodedGradientsAccumulator(2, 1e-3))
+            .thresholdAlgorithm(new AdaptiveThresholdAlgorithm())
 
             .build();
 
@@ -118,14 +118,11 @@ public class GradientsSharingLenetMnistExample {
 
         // optionally you might want to use MultipleEpochsIterator instead of manually iterating/resetting over your iterator
         //MultipleEpochsIterator mnistMultiEpochIterator = new MultipleEpochsIterator(nEpochs, mnistTrain);
-
-        nEpochs = 2;
         for( int i=0; i<nEpochs; i++ ) {
             long time1 = System.currentTimeMillis();
 
-            // Please note: we're feeding ParallelWrapper with iterator, not model directly
-//            wrapper.fit(mnistMultiEpochIterator);
             wrapper.fit(mnistTrain);
+
             long time2 = System.currentTimeMillis();
             log.info("*** Completed epoch {}, time: {} ***", i, (time2 - time1));
         }
