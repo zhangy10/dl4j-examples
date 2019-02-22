@@ -39,37 +39,16 @@ public class CNNHar {
 
 
     /*
-     * Input data is 4 classes, and each class has 20 images, so 4 * 20 = 80
-     *
-     * image: 100 * 100, RGB 3 channels
-     *
-     */
-    protected static int height = 1;
-    protected static int width = 128;
-    protected static int channels = 9;
-
-    // the number of each process round, and all 80 inputs will be processed in 4 rounds
-    protected static int batchSize = 16;
-
-    /*
      * randomly get a number
      */
     protected static long seed = 42;
     protected static Random rng = new Random(seed);
-
-    /*
-     * training length, if it's long, then train time will be long
-     */
-    protected static int epochs = 20;
 
     // training size 8:2
 //    protected static double splitTrainTest = 0.8;
 
     // whether save the output model
     protected static boolean save = false;
-
-    // the number of classes
-    private int numLabels = 6;
 
     // data file path
     private static final String path = "/Users/zhangyu/Desktop/mDeepBoost/Important/Data/New_data/Har/";
@@ -93,6 +72,16 @@ public class CNNHar {
         char delimiter = ',';
         File file = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/Har/x_train.csv");
 
+        // data settings
+        int epochs = 20;
+        int numLabels = 6;
+        int batchSize = 16;
+
+        int height = 1;
+        int width = 128;
+        int channels = 9;
+
+
         // loading data
         HarReader reader = new HarReader(numLinesToSkip, height, width, channels, numLabels, taskNum, delimiter);
         reader.initialize(new FileSplit(file));
@@ -104,7 +93,7 @@ public class CNNHar {
         iterator.setPreProcessor(normalizer);
 
         // build net
-        MultiLayerNetwork network = mbnet();
+        MultiLayerNetwork network = mbnet(channels, numLabels, height, width);
         network.init();
         network.setListeners(listener);
 
@@ -154,35 +143,35 @@ public class CNNHar {
      *
      * @return
      */
-    public MultiLayerNetwork mbnet() {
+    public MultiLayerNetwork mbnet(int channels, int numLabels, int height, int width) {
         // ??
         double nonZeroBias = 1; //偏差
         double dropOut = 0.8; //随机丢弃比例
 
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
-                .seed(seed)
-                .weightInit(WeightInit.NORMAL) //根据给定的分布采样参数
+            .seed(seed)
+            .weightInit(WeightInit.NORMAL) //根据给定的分布采样参数
 //                .dist(new NormalDistribution(0.0, 0.01)) //均值为0，方差为0.01的正态分布
-                .activation(Activation.RELU)
-                .updater(new Adam(0.001))
+            .activation(Activation.RELU)
+            .updater(new Adam(0.001))
 //                .biasUpdater(new Nesterovs(new StepSchedule(ScheduleType.ITERATION, 2e-2, 0.1, 100000), 0.9))
-                .gradientNormalization(GradientNormalization.RenormalizeL2PerLayer) // normalize to prevent vanishing or exploding gradients
-                //采用除以梯度2范数来规范化梯度防止梯度消失或突变
-                .l2(5 * 1e-4)
-                .list() //13层的网络,第1,3层构建了alexnet计算层，目的是对当前输出的结果做平滑处理，参数有相邻核映射数n=5,规范化常亮k=2,指数常量beta=0.75，系数常量alpha=1e-4
-                .layer(0, convNet("c1", channels, 36, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 0}, 0))
-                .layer(1, maxpooling("m1", new int[]{1, 2}, new int[]{1, 2}))
-                .layer(2, convNet("c2", 0, 72, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 0}, nonZeroBias))
-                .layer(3, maxpooling("m2", new int[]{1, 2}, new int[]{1, 2}))
-                .layer(4, full("f1", 300, nonZeroBias, dropOut))
-                .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
-                        .name("o1")
-                        .nOut(numLabels)
-                        .activation(Activation.SOFTMAX)
-                        .build())
-                .backprop(true)
-                .setInputType(InputType.convolutional(height, width, channels))
-                .build();
+            .gradientNormalization(GradientNormalization.RenormalizeL2PerLayer) // normalize to prevent vanishing or exploding gradients
+            //采用除以梯度2范数来规范化梯度防止梯度消失或突变
+            .l2(5 * 1e-4)
+            .list() //13层的网络,第1,3层构建了alexnet计算层，目的是对当前输出的结果做平滑处理，参数有相邻核映射数n=5,规范化常亮k=2,指数常量beta=0.75，系数常量alpha=1e-4
+            .layer(0, convNet("c1", channels, 36, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 0}, 0))
+            .layer(1, maxpooling("m1", new int[]{1, 2}, new int[]{1, 2}))
+            .layer(2, convNet("c2", 0, 72, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 0}, nonZeroBias))
+            .layer(3, maxpooling("m2", new int[]{1, 2}, new int[]{1, 2}))
+            .layer(4, full("f1", 300, nonZeroBias, dropOut))
+            .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                .name("o1")
+                .nOut(numLabels)
+                .activation(Activation.SOFTMAX)
+                .build())
+            .backprop(true)
+            .setInputType(InputType.convolutional(height, width, channels))
+            .build();
         return new MultiLayerNetwork(conf);
     }
 

@@ -8,11 +8,14 @@ import java.io.DataOutputStream;
 import java.io.FileOutputStream;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.io.*;
 
 public class ZacTest {
 
 
-    public static void main(String[] args) {
+    private static String file = "/Users/zhangyu/Desktop/zac_test";
+
+    public static void main(String[] args) throws Exception{
 //        DataOutputStream
 
 
@@ -25,23 +28,27 @@ public class ZacTest {
         int nRows = 1;
         int nColumns = 10;
 
-        INDArray zeros = Nd4j.zeros(nRows, nColumns);
+//        INDArray zeros = Nd4j.zeros(nRows, nColumns);
         INDArray random = Nd4j.rand(nRows, nColumns);
 //        INDArray ones = Nd4j.ones(nRows, nColumns, 6);
 
+        File array = new File(file);
 
-        INDArray aa = random.reshape('c', 2, 5);
+        Nd4j.saveBinary(random, array);
 
 
-        INDArray bb = random.reshape('f', 2, 5);
+//        INDArray aa = random.reshape('c', 2, 5);
+//
+//
+//        INDArray bb = random.reshape('f', 2, 5);
 
-        System.out.println(zeros);
+//        System.out.println(zeros);
         System.out.println(random);
 //        System.out.println(zeros.shape().toString());
 //        System.out.println(ones);
 //        System.out.println(ones.shape().toString());
-        System.out.println(aa);
-        System.out.println(bb);
+//        System.out.println(aa);
+//        System.out.println(bb);
 
 //        INDArray vstack = Nd4j.vstack(ones, zeros);
 //
