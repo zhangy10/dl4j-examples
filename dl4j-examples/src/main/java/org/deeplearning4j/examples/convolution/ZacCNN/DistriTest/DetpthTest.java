@@ -1,4 +1,5 @@
-package org.deeplearning4j.examples.dataexamples;
+package org.deeplearning4j.examples.convolution.ZacCNN.DistriTest;
+
 
 import org.datavec.api.records.reader.RecordReader;
 import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
@@ -6,14 +7,14 @@ import org.datavec.api.split.FileSplit;
 import org.datavec.api.util.ClassPathResource;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
-import org.deeplearning4j.nn.api.Model;
+import org.deeplearning4j.examples.dataexamples.CSVExample;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
+import org.deeplearning4j.nn.conf.layers.DepthwiseConvolution2D;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
-import org.deeplearning4j.optimize.api.TrainingListener;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -23,18 +24,12 @@ import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
 import org.nd4j.linalg.learning.config.Adam;
-import org.nd4j.linalg.learning.config.Sgd;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Map;
+public class DetpthTest {
 
-/**
- * @author Adam Gibson
- */
-public class CSVExample {
 
     private static Logger log = LoggerFactory.getLogger(CSVExample.class);
 
@@ -73,6 +68,12 @@ public class CSVExample {
         long seed = 6;
 
 
+        /**
+         * Test mobile net works
+         *
+         */
+
+
         log.info("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
                 .seed(seed)
@@ -81,6 +82,7 @@ public class CSVExample {
                 .updater(new Adam(0.1))
                 .l2(1e-4)
                 .list()
+//                .layer(0, new DepthwiseConvolution2D.Builder().kernelSize().depthMultiplier().stride().padding().build())
                 .layer(0, new DenseLayer.Builder().nIn(numInputs).nOut(3)
                         .build())
                 .layer(1, new DenseLayer.Builder().nIn(3).nOut(3)
@@ -95,7 +97,6 @@ public class CSVExample {
         MultiLayerNetwork model = new MultiLayerNetwork(conf);
         model.init();
         model.setListeners(new ScoreIterationListener(100));
-        model.setListeners(listener);
 
         for (int i = 0; i < 1000; i++) {
             model.fit(trainingData);
@@ -108,43 +109,4 @@ public class CSVExample {
         log.info(eval.stats());
     }
 
-
-    private static TrainingListener listener = new TrainingListener() {
-        @Override
-        public void iterationDone(Model model, int iteration, int epoch) {
-
-        }
-
-        @Override
-        public void onEpochStart(Model model) {
-
-        }
-
-        @Override
-        public void onEpochEnd(Model model) {
-
-        }
-
-        @Override
-        public void onForwardPass(Model model, List<INDArray> activations) {
-
-        }
-
-        @Override
-        public void onForwardPass(Model model, Map<String, INDArray> activations) {
-
-        }
-
-        @Override
-        public void onGradientCalculation(Model model) {
-
-        }
-
-        @Override
-        public void onBackwardPass(Model model) {
-
-        }
-    };
-
 }
-

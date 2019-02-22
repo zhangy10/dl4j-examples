@@ -1,4 +1,4 @@
-package org.deeplearning4j.examples.dataexamples;
+package org.deeplearning4j.examples.convolution.ZacCNN.DistriTest;
 
 import org.datavec.api.records.reader.RecordReader;
 import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
@@ -6,6 +6,7 @@ import org.datavec.api.split.FileSplit;
 import org.datavec.api.util.ClassPathResource;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
+import org.deeplearning4j.examples.dataexamples.CSVExample;
 import org.deeplearning4j.nn.api.Model;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -23,7 +24,6 @@ import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
 import org.nd4j.linalg.learning.config.Adam;
-import org.nd4j.linalg.learning.config.Sgd;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,10 +31,9 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 
-/**
- * @author Adam Gibson
- */
-public class CSVExample {
+public class MultiProTest {
+
+
 
     private static Logger log = LoggerFactory.getLogger(CSVExample.class);
 
@@ -145,6 +144,4 @@ public class CSVExample {
 
         }
     };
-
 }
-
