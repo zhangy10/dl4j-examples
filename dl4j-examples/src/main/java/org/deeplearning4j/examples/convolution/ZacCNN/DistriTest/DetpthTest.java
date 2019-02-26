@@ -5,17 +5,28 @@ import org.datavec.api.records.reader.RecordReader;
 import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
 import org.datavec.api.split.FileSplit;
 import org.datavec.api.util.ClassPathResource;
+import org.deeplearning4j.api.storage.StatsStorage;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
+import org.deeplearning4j.examples.convolution.AnimalsClassification;
+import org.deeplearning4j.examples.convolution.ZacCNN.CNNHar;
+import org.deeplearning4j.examples.convolution.ZacCNN.HarReader;
 import org.deeplearning4j.examples.dataexamples.CSVExample;
+import org.deeplearning4j.nn.api.Model;
+import org.deeplearning4j.nn.conf.ConvolutionMode;
+import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
-import org.deeplearning4j.nn.conf.layers.DenseLayer;
-import org.deeplearning4j.nn.conf.layers.DepthwiseConvolution2D;
-import org.deeplearning4j.nn.conf.layers.OutputLayer;
+import org.deeplearning4j.nn.conf.distribution.NormalDistribution;
+import org.deeplearning4j.nn.conf.inputs.InputType;
+import org.deeplearning4j.nn.conf.layers.*;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
+import org.deeplearning4j.optimize.api.TrainingListener;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
+import org.deeplearning4j.ui.api.UIServer;
+import org.deeplearning4j.ui.stats.StatsListener;
+import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
@@ -28,85 +39,203 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
 public class DetpthTest {
 
 
-    private static Logger log = LoggerFactory.getLogger(CSVExample.class);
+    protected static final Logger log = LoggerFactory.getLogger(AnimalsClassification.class);
+
+
+    /*
+     * randomly get a number
+     */
+    protected static long seed = 42;
+    protected static Random rng = new Random(seed);
+
+    // training size 8:2
+//    protected static double splitTrainTest = 0.8;
+
+    // whether save the output model
+    protected static boolean save = false;
+
+    // data file path
+    private static final String path = "/Users/zhangyu/Desktop/mDeepBoost/Important/Data/New_data/Har/";
+
+    private static final String save_path = "";
+
+    private boolean isSave = true;
+
 
     public static void main(String[] args) throws Exception {
+        new CNNHar().train();
+    }
 
-        //First: get the dataset using the record reader. CSVRecordReader handles loading/parsing
+
+    public void train() throws Exception {
         int numLinesToSkip = 0;
+        int taskNum = 7352;
+
+        int labelIndex = 1;
+
         char delimiter = ',';
-        RecordReader recordReader = new CSVRecordReader(numLinesToSkip, delimiter);
-        recordReader.initialize(new FileSplit(new ClassPathResource("iris_test.txt").getFile()));
-//        recordReader.initialize(new FileSplit(new ClassPathResource("iris.txt").getFile()));
+        File file = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/Har/x_train.csv");
 
-        //Second: the RecordReaderDataSetIterator handles conversion to DataSet objects, ready for use in neural network
-        int labelIndex = 4;     //5 values in each row of the iris.txt CSV: 4 input features followed by an integer label (class) index. Labels are the 5th value (index 4) in each row
-        int numClasses = 3;     //3 classes (types of iris flowers) in the iris data set. Classes have integer values 0, 1 or 2
-//        int batchSize = 150;    //Iris data set: 150 examples total. We are loading all of them into one DataSet (not recommended for large data sets)
-        int batchSize = 10;
+        // data settings
+        int epochs = 20;
+        int numLabels = 6;
+        int batchSize = 16;
 
-        DataSetIterator iterator = new RecordReaderDataSetIterator(recordReader, batchSize, labelIndex, numClasses);
-        DataSet allData = iterator.next();
-        allData.shuffle();
-        SplitTestAndTrain testAndTrain = allData.splitTestAndTrain(0.8);  //Use 65% of data for training
+        int height = 1;
+        int width = 128;
+        int channels = 9;
 
-        DataSet trainingData = testAndTrain.getTrain();
-        DataSet testData = testAndTrain.getTest();
 
-        //We need to normalize our data. We'll use NormalizeStandardize (which gives us mean 0, unit variance):
+        // loading data
+        HarReader reader = new HarReader(numLinesToSkip, height, width, channels, numLabels, taskNum, delimiter);
+        reader.initialize(new FileSplit(file));
+
+        DataSetIterator iterator = new RecordReaderDataSetIterator(reader, batchSize, labelIndex, numLabels);
+
         DataNormalization normalizer = new NormalizerStandardize();
-        normalizer.fit(trainingData);           //Collect the statistics (mean/stdev) from the training data. This does not modify the input data
-        normalizer.transform(trainingData);     //Apply normalization to the training data
-        normalizer.transform(testData);         //Apply normalization to the test data. This is using statistics calculated from the *training* set
+        normalizer.fit(iterator);
+        iterator.setPreProcessor(normalizer);
+
+        // build net
+        MultiLayerNetwork network = mbnet(channels, numLabels, height, width);
+        network.init();
+        network.setListeners(listener);
+
+        // set server listener
+        // if updated by each round, then print the score
+        UIServer uiServer = UIServer.getInstance();
+        StatsStorage statsStorage = new InMemoryStatsStorage();
+        uiServer.attach(statsStorage);
+        network.setListeners(new StatsListener(statsStorage), new ScoreIterationListener(1));
+
+        // training
+        network.fit(iterator, epochs);
 
 
-        final int numInputs = 4;
-        int outputNum = 3;
-        long seed = 6;
+        // testing
 
 
-        /**
-         * Test mobile net works
-         *
-         */
+        // save model
 
 
-        log.info("Build model....");
+    }
+
+    /**
+     * Build a layer
+     *
+     * @param name
+     * @param in
+     * @param out
+     * @param kernel
+     * @param stride
+     * @param pad
+     * @param bias
+     * @return
+     */
+    private ConvolutionLayer convNet(String name, int in, int out, int[] kernel, int[] stride, int[] pad, double bias) {
+        //卷积输入层，参数包括名字，过滤器数量，输出节点数，卷积核大小，步副大小，补充边框大小，偏差
+        if (in == -1) {
+            return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nOut(out).biasInit(bias).convolutionMode(ConvolutionMode.Same).build();
+        }
+        return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nIn(in).nOut(out).biasInit(bias).convolutionMode(ConvolutionMode.Same).build();
+    }
+
+    private SubsamplingLayer maxpooling(String name, int[] kernel, int[] stride) {
+        return new SubsamplingLayer.Builder(kernel, stride).name(name).build();
+    }
+
+    private DenseLayer full(String name, int out, double bias, double dropOut) {
+        //全连接层，本例中输出4096个节点，偏差为1，随机丢弃比例50%，参数服从均值为0，方差为0.005的高斯分布
+        return new DenseLayer.Builder().name(name).nOut(out).biasInit(bias).dropOut(dropOut).dist(new NormalDistribution(0, 1)).build();
+    }
+
+    private DepthwiseConvolution2D depth() {
+        return new DepthwiseConvolution2D();
+    }
+
+    /**
+     * MB Net
+     *
+     * @return
+     */
+    public MultiLayerNetwork mbnet(int channels, int numLabels, int height, int width) {
+        // ??
+        double nonZeroBias = 1; //偏差
+        double dropOut = 0.8; //随机丢弃比例
+
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
-                .seed(seed)
-                .activation(Activation.RELU)
-                .weightInit(WeightInit.XAVIER)
-                .updater(new Adam(0.1))
-                .l2(1e-4)
-                .list()
-//                .layer(0, new DepthwiseConvolution2D.Builder().kernelSize().depthMultiplier().stride().padding().build())
-                .layer(0, new DenseLayer.Builder().nIn(numInputs).nOut(3)
-                        .build())
-                .layer(1, new DenseLayer.Builder().nIn(3).nOut(3)
-                        .build())
-                .layer(2, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
-                        .activation(Activation.SOFTMAX)
-                        .nIn(3).nOut(outputNum).build())
-                .backprop(true).pretrain(false)
-                .build();
+                                           .seed(seed)
+                                           .weightInit(WeightInit.NORMAL) //根据给定的分布采样参数
+//                .dist(new NormalDistribution(0.0, 0.01)) //均值为0，方差为0.01的正态分布
+                                           .activation(Activation.RELU)
+                                           .updater(new Adam(0.001))
+//                .biasUpdater(new Nesterovs(new StepSchedule(ScheduleType.ITERATION, 2e-2, 0.1, 100000), 0.9))
+                                           .gradientNormalization(GradientNormalization.RenormalizeL2PerLayer) // normalize to prevent vanishing or exploding gradients
+                                           //采用除以梯度2范数来规范化梯度防止梯度消失或突变
+                                           .l2(5 * 1e-4)
+                                           .list() //13层的网络,第1,3层构建了alexnet计算层，目的是对当前输出的结果做平滑处理，参数有相邻核映射数n=5,规范化常亮k=2,指数常量beta=0.75，系数常量alpha=1e-4
+                                           .layer(0, convNet("c1", channels, 36, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 0}, 0))
+                                           // update padding issue
+//                                           .layer(0, convNet("c1", channels, 36, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 32}, 0))
+                                           .layer(1, maxpooling("m1", new int[]{1, 2}, new int[]{1, 2}))
+                                           .layer(2, convNet("c2", -1, 72, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 0}, nonZeroBias))
+//                                           .layer(2, convNet("c2", -1, 72, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 16}, nonZeroBias))
+                                           .layer(3, maxpooling("m2", new int[]{1, 2}, new int[]{1, 2}))
+                                           .layer(4, full("f1", 300, nonZeroBias, dropOut))
+                                           .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                                         .name("o1")
+                                                         .nOut(numLabels)
+                                                         .activation(Activation.SOFTMAX)
+                                                         .build())
+                                           .backprop(true)
+                                           .setInputType(InputType.convolutional(height, width, channels))
+                                           .build();
+        return new MultiLayerNetwork(conf);
+    }
 
-        //run the model
-        MultiLayerNetwork model = new MultiLayerNetwork(conf);
-        model.init();
-        model.setListeners(new ScoreIterationListener(100));
-
-        for (int i = 0; i < 1000; i++) {
-            model.fit(trainingData);
+    public TrainingListener listener = new TrainingListener() {
+        @Override
+        public void iterationDone(Model model, int iteration, int epoch) {
+            System.out.println("iteration done: " + iteration + " model score: " + model.score());
         }
 
-        //evaluate the model on the test set
-        Evaluation eval = new Evaluation(3);
-        INDArray output = model.output(testData.getFeatures());
-        eval.eval(testData.getLabels(), output);
-        log.info(eval.stats());
-    }
+        @Override
+        public void onEpochStart(Model model) {
+            System.out.println("---onEpochStart---");
+        }
+
+        @Override
+        public void onEpochEnd(Model model) {
+            System.out.println("---onEpochEnd---");
+        }
+
+        @Override
+        public void onForwardPass(Model model, List<INDArray> activations) {
+            System.out.println("onForwardPass output of all layers");
+        }
+
+        @Override
+        public void onForwardPass(Model model, Map<String, INDArray> activations) {
+            System.out.println("onForwardPass output of all layers");
+        }
+
+        @Override
+        public void onGradientCalculation(Model model) {
+            System.out.println("onGradientCalculation");
+        }
+
+        @Override
+        public void onBackwardPass(Model model) {
+            System.out.println("onBackwardPass");
+        }
+    };
 
 }

@@ -2,9 +2,11 @@ package org.deeplearning4j.examples.convolution.ZacCNN;
 
 import org.datavec.api.split.FileSplit;
 import org.datavec.api.util.ClassPathResource;
+import org.deeplearning4j.api.storage.StatsStorage;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.examples.convolution.AnimalsClassification;
 import org.deeplearning4j.nn.api.Model;
+import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -17,6 +19,10 @@ import org.deeplearning4j.nn.conf.layers.SubsamplingLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.api.TrainingListener;
+import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
+import org.deeplearning4j.ui.api.UIServer;
+import org.deeplearning4j.ui.stats.StatsListener;
+import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
@@ -97,6 +103,13 @@ public class CNNHar {
         network.init();
         network.setListeners(listener);
 
+        // set server listener
+        // if updated by each round, then print the score
+        UIServer uiServer = UIServer.getInstance();
+        StatsStorage statsStorage = new InMemoryStatsStorage();
+        uiServer.attach(statsStorage);
+        network.setListeners(new StatsListener(statsStorage), new ScoreIterationListener(1));
+
         // training
         network.fit(iterator, epochs);
 
@@ -123,10 +136,10 @@ public class CNNHar {
      */
     private ConvolutionLayer convNet(String name, int in, int out, int[] kernel, int[] stride, int[] pad, double bias) {
         //卷积输入层，参数包括名字，过滤器数量，输出节点数，卷积核大小，步副大小，补充边框大小，偏差
-        if (in == 0) {
-            return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nOut(out).biasInit(bias).build();
+        if (in == -1) {
+            return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nOut(out).biasInit(bias).convolutionMode(ConvolutionMode.Same).build();
         }
-        return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nIn(in).nOut(out).biasInit(bias).build();
+        return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nIn(in).nOut(out).biasInit(bias).convolutionMode(ConvolutionMode.Same).build();
     }
 
     private SubsamplingLayer maxpooling(String name, int[] kernel, int[] stride) {
@@ -149,29 +162,32 @@ public class CNNHar {
         double dropOut = 0.8; //随机丢弃比例
 
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
-            .seed(seed)
-            .weightInit(WeightInit.NORMAL) //根据给定的分布采样参数
+                                           .seed(seed)
+                                           .weightInit(WeightInit.NORMAL) //根据给定的分布采样参数
 //                .dist(new NormalDistribution(0.0, 0.01)) //均值为0，方差为0.01的正态分布
-            .activation(Activation.RELU)
-            .updater(new Adam(0.001))
+                                           .activation(Activation.RELU)
+                                           .updater(new Adam(0.001))
 //                .biasUpdater(new Nesterovs(new StepSchedule(ScheduleType.ITERATION, 2e-2, 0.1, 100000), 0.9))
-            .gradientNormalization(GradientNormalization.RenormalizeL2PerLayer) // normalize to prevent vanishing or exploding gradients
-            //采用除以梯度2范数来规范化梯度防止梯度消失或突变
-            .l2(5 * 1e-4)
-            .list() //13层的网络,第1,3层构建了alexnet计算层，目的是对当前输出的结果做平滑处理，参数有相邻核映射数n=5,规范化常亮k=2,指数常量beta=0.75，系数常量alpha=1e-4
-            .layer(0, convNet("c1", channels, 36, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 0}, 0))
-            .layer(1, maxpooling("m1", new int[]{1, 2}, new int[]{1, 2}))
-            .layer(2, convNet("c2", 0, 72, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 0}, nonZeroBias))
-            .layer(3, maxpooling("m2", new int[]{1, 2}, new int[]{1, 2}))
-            .layer(4, full("f1", 300, nonZeroBias, dropOut))
-            .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
-                .name("o1")
-                .nOut(numLabels)
-                .activation(Activation.SOFTMAX)
-                .build())
-            .backprop(true)
-            .setInputType(InputType.convolutional(height, width, channels))
-            .build();
+                                           .gradientNormalization(GradientNormalization.RenormalizeL2PerLayer) // normalize to prevent vanishing or exploding gradients
+                                           //采用除以梯度2范数来规范化梯度防止梯度消失或突变
+                                           .l2(5 * 1e-4)
+                                           .list() //13层的网络,第1,3层构建了alexnet计算层，目的是对当前输出的结果做平滑处理，参数有相邻核映射数n=5,规范化常亮k=2,指数常量beta=0.75，系数常量alpha=1e-4
+                                           .layer(0, convNet("c1", channels, 36, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 0}, 0))
+                                           // update padding issue
+//                                           .layer(0, convNet("c1", channels, 36, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 32}, 0))
+                                           .layer(1, maxpooling("m1", new int[]{1, 2}, new int[]{1, 2}))
+                                           .layer(2, convNet("c2", -1, 72, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 0}, nonZeroBias))
+//                                           .layer(2, convNet("c2", -1, 72, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 16}, nonZeroBias))
+                                           .layer(3, maxpooling("m2", new int[]{1, 2}, new int[]{1, 2}))
+                                           .layer(4, full("f1", 300, nonZeroBias, dropOut))
+                                           .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                                         .name("o1")
+                                                         .nOut(numLabels)
+                                                         .activation(Activation.SOFTMAX)
+                                                         .build())
+                                           .backprop(true)
+                                           .setInputType(InputType.convolutional(height, width, channels))
+                                           .build();
         return new MultiLayerNetwork(conf);
     }
 
@@ -183,22 +199,22 @@ public class CNNHar {
 
         @Override
         public void onEpochStart(Model model) {
-            System.out.println("onEpochStart");
+            System.out.println("---onEpochStart---");
         }
 
         @Override
         public void onEpochEnd(Model model) {
-            System.out.println("onEpochEnd");
+            System.out.println("---onEpochEnd---");
         }
 
         @Override
         public void onForwardPass(Model model, List<INDArray> activations) {
-            System.out.println("onForwardPass");
+            System.out.println("onForwardPass output of all layers");
         }
 
         @Override
         public void onForwardPass(Model model, Map<String, INDArray> activations) {
-            System.out.println("onForwardPass");
+            System.out.println("onForwardPass output of all layers");
         }
 
         @Override
