@@ -149,4 +149,16 @@ public class HarReader extends CSVRecordReader {
         }
         return ret;
     }
+
+    public int getChannels() {
+        return channels;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public int getWidth() {
+        return width;
+    }
 }

@@ -1,13 +1,11 @@
 package org.deeplearning4j.examples.convolution.ZacCNN.DistriTest;
 
-import org.datavec.api.records.reader.RecordReader;
-import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
 import org.datavec.api.split.FileSplit;
 import org.datavec.api.util.ClassPathResource;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
-import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.examples.convolution.ZacCNN.HarReader;
 import org.deeplearning4j.examples.dataexamples.CSVExample;
+import org.deeplearning4j.nn.api.Layer;
 import org.deeplearning4j.nn.api.Model;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -17,11 +15,8 @@ import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.api.TrainingListener;
-import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.dataset.DataSet;
-import org.nd4j.linalg.dataset.SplitTestAndTrain;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
@@ -36,7 +31,7 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class TrainTask extends Thread {
+public class MultiTask extends Thread {
 
     private static Logger log = LoggerFactory.getLogger(CSVExample.class);
 
@@ -53,14 +48,16 @@ public class TrainTask extends Thread {
         // split task to 2 thread test
         int totalTask = 10;
 
-        TrainTask master = new TrainTask(new Settings(0, 5), true);
-        TrainTask slave = new TrainTask(new Settings(5, 5));
+        MultiTask master = new MultiTask(new Settings(0, 5), true);
+//        MultiTask slave = new MultiTask(new Settings(5, 5));
 
-        master.setSendQueue(slave.getQueue());
-        slave.setSendQueue(master.getQueue());
+//        master.setSendQueue(slave.getQueue());
+//        slave.setSendQueue(master.getQueue());
 
         master.start();
-        slave.start();
+//        slave.start();
+
+
     }
 
     public BlockingQueue getQueue() {
@@ -70,6 +67,9 @@ public class TrainTask extends Thread {
     public void setSendQueue(BlockingQueue<Msg> sendQueue) {
         this.sendQueue = sendQueue;
     }
+
+
+
 
     public MultiLayerConfiguration getModelConf(int classNum, int h, int w, int channel) {
         long seed = 6;
@@ -81,6 +81,7 @@ public class TrainTask extends Thread {
                    .updater(new Adam(0.1))
                    .l2(1e-4)
                    .list()
+
                    .layer(0, new DenseLayer.Builder().nOut(6)
                                  .build())
                    .layer(1, new DenseLayer.Builder().nIn(6).nOut(9)
@@ -94,49 +95,97 @@ public class TrainTask extends Thread {
                    .build();
     }
 
-    public TrainingListener listener = new TrainingListener() {
+
+    public class MultiListener implements TrainingListener {
+        private boolean isMaster = false;
+
+        public MultiListener(boolean isMaster) {
+            this.isMaster = isMaster;
+        }
+
         @Override
         public void iterationDone(Model model, int iteration, int epoch) {
-            System.out.println("iteration done: " + iteration + " model score: " + model.score());
+
         }
 
         @Override
         public void onEpochStart(Model model) {
-            System.out.println("onEpochStart");
+
         }
 
         @Override
         public void onEpochEnd(Model model) {
-            System.out.println("onEpochEnd");
+            // each epoch end, then will do weight sync
+            if (isMaster) {
+                Msg msg = null;
+                try {
+                    System.out.println("Master is taking...");
+                    msg = queue.take();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                INDArray masterP = model.params();
+                INDArray slaveP = msg.parameters;
+
+                // weight sync
+                System.out.println("SGD +++++++++");
+                INDArray newP = masterP.add(slaveP);
+                newP = newP.div(2);
+                model.setParams(newP);
+
+                Msg newMsg = new Msg();
+                newMsg.parameters = newP;
+                sendQueue.offer(newMsg);
+            } else {
+                Msg msg = new Msg();
+                msg.parameters = model.params();
+                System.out.println("Slave is sending...");
+                sendQueue.offer(msg);
+                Msg newMsg = null;
+                try {
+                    System.out.println("Slave is waiting for master...");
+                    newMsg = queue.take();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Slave get new P....");
+
+                INDArray newP = newMsg.parameters;
+                model.setParams(newP);
+
+                // if get each layer
+//                Layer layer = ((MultiLayerNetwork) model).getLayer(0);
+//                layer.setParams(newP);
+
+            }
         }
 
         @Override
         public void onForwardPass(Model model, List<INDArray> activations) {
-            System.out.println("onForwardPass");
+
         }
 
         @Override
         public void onForwardPass(Model model, Map<String, INDArray> activations) {
-            System.out.println("onForwardPass");
+
         }
 
         @Override
         public void onGradientCalculation(Model model) {
-            System.out.println("onGradientCalculation");
+
         }
 
         @Override
         public void onBackwardPass(Model model) {
-            System.out.println("onBackwardPass");
+
         }
-    };
+    }
 
-
-    public TrainTask(Settings settings) {
+    public MultiTask(Settings settings) {
         this.settings = settings;
     }
 
-    public TrainTask(Settings settings, boolean isMaster) {
+    public MultiTask(Settings settings, boolean isMaster) {
         this(settings);
         this.isMaster = isMaster;
     }
@@ -170,33 +219,32 @@ public class TrainTask extends Thread {
             model = new MultiLayerNetwork(conf);
             model.init();
             // send init to others
-
-
-            send(message);
+            message.parameters = model.params();
+            sendQueue.offer(message);
         } else {
             try {
                 // read from master
                 Msg message = queue.take();
                 MultiLayerConfiguration conf = MultiLayerConfiguration.fromJson(message.confJosn);
                 model = new MultiLayerNetwork(conf);
-                model.init(message.parameters, false);
+                // clone will be false in real case
+                model.init(message.parameters, true);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
 
-        model.setListeners(listener);
+        model.setListeners(new MultiListener(isMaster));
         model.fit(iterator, settings.epoch);
-    }
 
-    public void send(Msg message) {
-        if (sendQueue != null) {
-            sendQueue.offer(message);
+        // evaluate
+        if (isMaster) {
+
         }
     }
 
     static class Settings {
-        int epoch = 2;
+        int epoch = 3;
 
         //First: get the dataset using the record reader. CSVRecordReader handles loading/parsing
         int numLinesToSkip = 0;
@@ -229,9 +277,7 @@ public class TrainTask extends Thread {
 
     public class Msg {
         INDArray parameters;
-
         String confJosn;
-
     }
 
 }

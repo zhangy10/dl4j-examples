@@ -11,9 +11,10 @@ import org.datavec.image.transform.FlipImageTransform;
 import org.datavec.image.transform.ImageTransform;
 import org.datavec.image.transform.PipelineImageTransform;
 import org.datavec.image.transform.WarpImageTransform;
-import org.deeplearning4j.api.storage.StatsStorage;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
+import org.deeplearning4j.nn.api.Layer;
+import org.deeplearning4j.nn.api.Model;
 import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -25,12 +26,10 @@ import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
 import org.deeplearning4j.nn.conf.layers.*;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
-import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
-import org.deeplearning4j.ui.api.UIServer;
-import org.deeplearning4j.ui.stats.StatsListener;
-import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
+import org.deeplearning4j.optimize.api.TrainingListener;
 import org.deeplearning4j.util.ModelSerializer;
 import org.nd4j.linalg.activations.Activation;
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
@@ -47,6 +46,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import static java.lang.Math.toIntExact;
@@ -94,7 +94,7 @@ public class AnimalsClassification {
     /*
      * training length, if it's long, then train time will be long
      */
-    protected static int epochs = 50;
+    protected static int epochs = 10;
 
     // training size 8:2
     protected static double splitTrainTest = 0.8;
@@ -115,6 +115,60 @@ public class AnimalsClassification {
     private static final String path = "dl4j-examples/src/main/resources/animals/";
     private static final String rootDir = "dl4j-examples";
     private static final String errorDir = "deeplearning4j-examples";
+
+
+
+
+    private TrainingListener listener = new TrainingListener() {
+        @Override
+        public void iterationDone(Model model, int iteration, int epoch) {
+
+        }
+
+        @Override
+        public void onEpochStart(Model model) {
+            System.out.println("epoc end");
+            MultiLayerNetwork network = (MultiLayerNetwork) model;
+            Layer l1 = network.getLayer(0);
+            Layer l2 = network.getLayer(1);
+            Layer l3 = network.getLayer(2);
+            Layer l4 = network.getLayer(3);
+            Layer l5 = network.getLayer(4);
+            Layer l6 = network.getLayer(5);
+        }
+
+        @Override
+        public void onEpochEnd(Model model) {
+//            System.out.println("epoc end");
+//            MultiLayerNetwork network = (MultiLayerNetwork) model;
+//            Layer l1 = network.getLayer(0);
+//            Layer l2 = network.getLayer(1);
+//            Layer l3 = network.getLayer(2);
+//            Layer l4 = network.getLayer(3);
+//            Layer l5 = network.getLayer(4);
+//            Layer l6 = network.getLayer(5);
+        }
+
+        @Override
+        public void onForwardPass(Model model, List<INDArray> activations) {
+
+        }
+
+        @Override
+        public void onForwardPass(Model model, Map<String, INDArray> activations) {
+
+        }
+
+        @Override
+        public void onGradientCalculation(Model model) {
+
+        }
+
+        @Override
+        public void onBackwardPass(Model model) {
+
+        }
+    };
 
 
     /**
@@ -248,12 +302,13 @@ public class AnimalsClassification {
         // network.setListeners(new ScoreIterationListener(listenerFreq));
 
         // if updated by each round, then print the score
-        UIServer uiServer = UIServer.getInstance();
-        StatsStorage statsStorage = new InMemoryStatsStorage();
-        uiServer.attach(statsStorage);
-
-        // set listener, 参数有更新 则回调
-        network.setListeners(new StatsListener(statsStorage), new ScoreIterationListener(1));
+//        UIServer uiServer = UIServer.getInstance();
+//        StatsStorage statsStorage = new InMemoryStatsStorage();
+//        uiServer.attach(statsStorage);
+//
+//        // set listener, 参数有更新 则回调
+//        network.setListeners(new StatsListener(statsStorage), new ScoreIterationListener(1));
+        network.setListeners(listener);
 
 
         /**

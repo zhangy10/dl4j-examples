@@ -1,55 +1,47 @@
 package org.deeplearning4j.examples.convolution.ZacCNN.DistriTest;
 
-import org.datavec.api.records.reader.RecordReader;
-import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
 import org.datavec.api.split.FileSplit;
 import org.datavec.api.util.ClassPathResource;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
-import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.examples.convolution.ZacCNN.HarReader;
-import org.deeplearning4j.examples.dataexamples.CSVExample;
+import org.deeplearning4j.nn.api.Layer;
 import org.deeplearning4j.nn.api.Model;
+import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
+import org.deeplearning4j.nn.conf.distribution.NormalDistribution;
 import org.deeplearning4j.nn.conf.inputs.InputType;
+import org.deeplearning4j.nn.conf.layers.ConvolutionLayer;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
+import org.deeplearning4j.nn.conf.layers.SubsamplingLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.api.TrainingListener;
-import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.dataset.DataSet;
-import org.nd4j.linalg.dataset.SplitTestAndTrain;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
-import org.nd4j.linalg.dataset.api.preprocessor.StandardizeStrategy;
 import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.List;
 import java.util.Map;
 
-public class ReadCSVTest {
-
-
-    private static Logger log = LoggerFactory.getLogger(CSVExample.class);
+public class ParamTest {
 
     public static void main(String[] args) throws Exception {
 
-        int epoch = 2;
+        int epoch = 3;
 
         //First: get the dataset using the record reader. CSVRecordReader handles loading/parsing
-        int numLinesToSkip = 5;
-        int taskNum = 5;
+        int numLinesToSkip = 0;
+        int taskNum = 10;
 
         char delimiter = ',';
-        File file = new ClassPathResource("iris_test.txt").getFile();
+        File file = new ClassPathResource("zac.txt").getFile();
 
         //Second: the RecordReaderDataSetIterator handles conversion to DataSet objects, ready for use in neural network
         // last pos is label
@@ -57,12 +49,12 @@ public class ReadCSVTest {
         int labelIndex = 1;     //5 values in each row of the iris.txt CSV: 4 input features followed by an integer label (class) index. Labels are the 5th value (index 4) in each row
 
         int numClasses = 3;     //3 classes (types of iris flowers) in the iris data set. Classes have integer values 0, 1 or 2
-        int batchSize = 2;
+        int batchSize = 4;
 
         // channel * width = inputwidth
-        int channel = 2;
+        int channel = 3;
         int height = 1;
-        int width = 2;
+        int width = 4;
 
 
         HarReader reader = new HarReader(numLinesToSkip, height, width, channel, numClasses, taskNum, delimiter);
@@ -101,28 +93,50 @@ public class ReadCSVTest {
 //        log.info(eval.stats());
     }
 
+
+    private static ConvolutionLayer convNet(String name, int in, int out, int[] kernel, int[] stride, int[] pad, double bias) {
+        //卷积输入层，参数包括名字，过滤器数量，输出节点数，卷积核大小，步副大小，补充边框大小，偏差
+        if (in == -1) {
+            return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nOut(out).biasInit(bias).convolutionMode(ConvolutionMode.Same).build();
+        }
+        return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nIn(in).nOut(out).biasInit(bias).convolutionMode(ConvolutionMode.Same).build();
+    }
+
+    private static SubsamplingLayer maxpooling(String name, int[] kernel, int[] stride) {
+        return new SubsamplingLayer.Builder(kernel, stride).name(name).build();
+    }
+
+    private static DenseLayer full(String name, int out, double bias) {
+        //全连接层，本例中输出4096个节点，偏差为1，随机丢弃比例50%，参数服从均值为0，方差为0.005的高斯分布
+        return new DenseLayer.Builder().name(name).nOut(out).biasInit(bias).dist(new NormalDistribution(0, 1)).build();
+    }
+
     public static MultiLayerNetwork getModel(int classNum, int h, int w, int channel) {
         long seed = 6;
+        double nonZeroBias = 1; //偏差
 
-        log.info("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
-                .seed(seed)
-                .activation(Activation.RELU)
-                .weightInit(WeightInit.XAVIER)
-                .updater(new Adam(0.1))
-                .l2(1e-4)
-                .list()
-                .layer(0, new DenseLayer.Builder().nOut(6)
-                        .build())
-                .layer(1, new DenseLayer.Builder().nIn(6).nOut(9)
-                        .build())
-                .layer(2, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
-                        .activation(Activation.SOFTMAX)
-                        .nIn(9).nOut(classNum).build())
-                // will do flat matrix to 2d for full-connected layer
-                .setInputType(InputType.convolutional(h, w, channel)) // image的长宽
-                .backprop(true).pretrain(false)
-                .build();
+                                           .seed(seed)
+                                           .activation(Activation.RELU)
+                                           .weightInit(WeightInit.DISTRIBUTION)
+                                           .dist(new NormalDistribution(0.0, 1.0)) //均值为0，方差为1.0的正态分布
+                                           .updater(new Adam(0.1))
+                                           .l2(1e-4)
+                                           .list()
+                                           .layer(0, convNet("c1", channel, 6, new int[]{1, 2}, new int[]{1, 1}, new int[]{0, 0}, 0))
+                                           // update padding issue
+//                                           .layer(0, convNet("c1", channels, 36, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 32}, 0))
+                                           .layer(1, maxpooling("m1", new int[]{1, 2}, new int[]{1, 2}))
+                                           .layer(2, full("f1", 20, nonZeroBias))
+//                                           .layer(3, new DenseLayer.Builder().nIn(6).nOut(9)
+//                                                         .build())
+                                           .layer(3, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT).name("o1")
+                                                         .activation(Activation.SOFTMAX)
+                                                         .nOut(classNum).build())
+                                           // will do flat matrix to 2d for full-connected layer
+                                           .setInputType(InputType.convolutional(h, w, channel)) // image的长宽
+                                           .backprop(true).pretrain(false)
+                                           .build();
 
 
         //run the model
@@ -141,6 +155,11 @@ public class ReadCSVTest {
         @Override
         public void onEpochStart(Model model) {
             System.out.println("onEpochStart");
+            MultiLayerNetwork network = (MultiLayerNetwork) model;
+            Layer l1 = network.getLayer(0);
+            Layer l2 = network.getLayer(1);
+            Layer l3 = network.getLayer(2);
+            Layer l4 = network.getLayer(3);
         }
 
         @Override
@@ -168,5 +187,6 @@ public class ReadCSVTest {
             System.out.println("onBackwardPass");
         }
     };
+
 
 }
