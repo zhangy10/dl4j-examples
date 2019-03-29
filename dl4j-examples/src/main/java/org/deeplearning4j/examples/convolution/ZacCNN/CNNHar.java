@@ -4,6 +4,7 @@ import org.datavec.api.split.FileSplit;
 import org.datavec.api.util.ClassPathResource;
 import org.deeplearning4j.api.storage.StatsStorage;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
+import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.examples.convolution.AnimalsClassification;
 import org.deeplearning4j.nn.api.Model;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
@@ -23,6 +24,7 @@ import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.deeplearning4j.ui.api.UIServer;
 import org.deeplearning4j.ui.stats.StatsListener;
 import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
+import org.deeplearning4j.util.ModelSerializer;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
@@ -34,14 +36,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class CNNHar {
 
 
-    protected static final Logger log = LoggerFactory.getLogger(AnimalsClassification.class);
+    protected static final Logger log = LoggerFactory.getLogger(CNNHar.class);
 
 
     /*
@@ -58,11 +58,13 @@ public class CNNHar {
 
     // data file path
 //    private static final String path = "/Users/zhangyu/Desktop/mDeepBoost/Important/Data/New_data/Har/";
-    private static final String path = "/Users/zber/Desktop/Data/Har、";
+//    private static final String path = "/Users/zber/Desktop/Data/Har、";
 
     private static final String save_path = "";
 
     private boolean isSave = true;
+
+    private Map<Integer, List<Double>> epocLoss = new TreeMap<>();
 
 
     public static void main(String[] args) throws Exception {
@@ -73,11 +75,15 @@ public class CNNHar {
     public void train() throws Exception {
         int numLinesToSkip = 0;
         int taskNum = 7352;
+//        int taskNum = 100;
 
         int labelIndex = 1;
 
         char delimiter = ',';
-        File file = new File("/Users/zber/Desktop/Data/Har/train/train.csv");
+//        File file = new File("/Users/zber/Desktop/Data/Har/train/train.csv");
+//        File file = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/x_train.csv");
+//        File file = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/nor_shuffle_data/1_train.csv");
+        File file = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/nor_train.csv");
 
         // data settings
         int epochs = 20;
@@ -95,9 +101,9 @@ public class CNNHar {
 
         DataSetIterator iterator = new RecordReaderDataSetIterator(reader, batchSize, labelIndex, numLabels);
 
-        DataNormalization normalizer = new NormalizerStandardize();
-        normalizer.fit(iterator);
-        iterator.setPreProcessor(normalizer);
+//        DataNormalization normalizer = new NormalizerStandardize();
+//        normalizer.fit(iterator);
+//        iterator.setPreProcessor(normalizer);
 
         // build net
         MultiLayerNetwork network = mbnet(channels, numLabels, height, width);
@@ -106,21 +112,50 @@ public class CNNHar {
 
         // set server listener
         // if updated by each round, then print the score
-        UIServer uiServer = UIServer.getInstance();
-        StatsStorage statsStorage = new InMemoryStatsStorage();
-        uiServer.attach(statsStorage);
-        network.setListeners(new StatsListener(statsStorage), new ScoreIterationListener(1));
+//        UIServer uiServer = UIServer.getInstance();
+//        StatsStorage statsStorage = new InMemoryStatsStorage();
+//        uiServer.attach(statsStorage);
+//        network.setListeners(new StatsListener(statsStorage), new ScoreIterationListener(1));
 
         // training
         network.fit(iterator, epochs);
 
 
         // testing
-
+//        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/test.csv");
+//
+//        reader.initialize(new FileSplit(testFile));
+//
+//        iterator = new RecordReaderDataSetIterator(reader, batchSize, labelIndex, numLabels);
+//        normalizer.fit(iterator);
+//        iterator.setPreProcessor(normalizer);
+//
+//        Evaluation eval = network.evaluate(iterator);
+//        log.info(eval.stats(true));
 
         // save model
+        log.info("Save model....");
+//        String basePath = "/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/";
+        String basePath = "/Users/zhangyu/Desktop/mDeepBoost/Important/Data/nor_shuffle_data/";
 
+        ModelSerializer.writeModel(network, basePath + "model.bin", true);
+        log.info("Save model done!!");
 
+        // each epoc average
+        List<Double> averageList = new ArrayList<>();
+        Iterator<Integer> it = epocLoss.keySet().iterator();
+        while (it.hasNext()) {
+            int index = it.next();
+            List<Double> epocList = epocLoss.get(index);
+            int size = epocList.size();
+            double average = 0;
+            for (int i = 0; i < size; i++) {
+                average += epocList.get(i);
+            }
+            averageList.add(average / size);
+        }
+
+        System.out.println(averageList);
     }
 
     /**
@@ -164,8 +199,9 @@ public class CNNHar {
 
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
                                            .seed(seed)
-                                           .weightInit(WeightInit.NORMAL) //根据给定的分布采样参数
-//                .dist(new NormalDistribution(0.0, 0.01)) //均值为0，方差为0.01的正态分布
+//                                           .weightInit(WeightInit.NORMAL) //根据给定的分布采样参数
+                                           .weightInit(WeightInit.DISTRIBUTION)
+                                           .dist(new NormalDistribution(0.0, 1.0)) //均值为0，方差为1.0的正态分布
                                            .activation(Activation.RELU)
                                            .updater(new Adam(0.001))
 //                .biasUpdater(new Nesterovs(new StepSchedule(ScheduleType.ITERATION, 2e-2, 0.1, 100000), 0.9))
@@ -197,7 +233,13 @@ public class CNNHar {
     public TrainingListener listener = new TrainingListener() {
         @Override
         public void iterationDone(Model model, int iteration, int epoch) {
-            System.out.println("iteration done: " + iteration + " model score: " + model.score());
+            System.out.println("iteration done: " + iteration + " model score: " + model.score() + " epoch: " + epoch);
+            List<Double> list = epocLoss.get(epoch);
+            if (list == null) {
+                list = new ArrayList<>();
+                epocLoss.put(epoch, list);
+            }
+            list.add(model.score());
         }
 
         @Override

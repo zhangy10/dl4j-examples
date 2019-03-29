@@ -147,6 +147,8 @@ public class DepthWiseHar {
               return new SeparableConvolution2D.Builder(kernel,stride,pad).name(name).nOut(out).biasInit(bias).depthMultiplier(multiplier).build();
 //            return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nOut(out).biasInit(bias).build();
         }
+
+        DepthwiseConvolution2D d = new DepthwiseConvolution2D();
           return new SeparableConvolution2D.Builder(kernel,stride,pad).name(name).nIn(in).nOut(out).biasInit(bias).depthMultiplier(multiplier).build();
 //        return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nIn(in).nOut(out).biasInit(bias).build();
     }
