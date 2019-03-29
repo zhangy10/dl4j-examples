@@ -97,6 +97,8 @@ public class DepthWiseHar {
         // build net
         MultiLayerNetwork network = mbnet(channels, numLabels, height, width);
         network.init();
+        network.setListeners(listener);
+
 
         UIServer uiServer = UIServer.getInstance();
         StatsStorage statsStorage = new InMemoryStatsStorage();
@@ -104,7 +106,6 @@ public class DepthWiseHar {
         // set listener, 参数有更新 则回调
         network.setListeners(new StatsListener(statsStorage), new ScoreIterationListener(1));
 
-        network.setListeners(listener);
 
         // training
         network.fit(iterator, epochs);
