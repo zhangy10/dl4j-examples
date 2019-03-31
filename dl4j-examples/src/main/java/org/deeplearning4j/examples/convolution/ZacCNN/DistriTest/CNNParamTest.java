@@ -6,6 +6,7 @@ import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.examples.convolution.ZacCNN.HarReader;
 import org.deeplearning4j.nn.api.Layer;
 import org.deeplearning4j.nn.api.Model;
+import org.deeplearning4j.nn.api.Updater;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -30,7 +31,7 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 
-public class ParamTest {
+public class CNNParamTest {
 
     public static void main(String[] args) throws Exception {
 
@@ -146,9 +147,29 @@ public class ParamTest {
         return model;
     }
 
+    private static int epoc = 0;
+
+    private static INDArray w0 = null;
+
+    private static INDArray Aw = null;
+
     public static TrainingListener listener = new TrainingListener() {
         @Override
         public void iterationDone(Model model, int iteration, int epoch) {
+
+            if (epoc != epoch) {
+                // new epoc
+                epoc = epoch;
+                Aw = null;
+            }
+
+            if (Aw == null) {
+                Aw = model.gradient().gradient().dup();
+            }
+            else {
+                Aw.addi(model.gradient().gradient());
+            }
+
             System.out.println("iteration done: " + iteration + " model score: " + model.score());
         }
 
@@ -160,11 +181,20 @@ public class ParamTest {
             Layer l2 = network.getLayer(1);
             Layer l3 = network.getLayer(2);
             Layer l4 = network.getLayer(3);
+
+            w0 = model.params().dup();
+
+//            Updater u = ((MultiLayerNetwork) model).getUpdater();
+//            u.update();
         }
 
         @Override
         public void onEpochEnd(Model model) {
             System.out.println("onEpochEnd");
+
+            INDArray newW = w0.sub(Aw);
+
+            INDArray w = model.params();
         }
 
         @Override
