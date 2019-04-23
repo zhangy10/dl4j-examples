@@ -30,6 +30,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
@@ -110,6 +111,12 @@ public class CNNHar {
         network.init();
         network.setListeners(listener);
 
+
+        // TODO test for compress data
+        INDArray params = network.params();
+        Nd4j.saveBinary(params, new File("/Users/zhangyu/Desktop/test"));
+
+
         // set server listener
         // if updated by each round, then print the score
 //        UIServer uiServer = UIServer.getInstance();
@@ -118,7 +125,7 @@ public class CNNHar {
 //        network.setListeners(new StatsListener(statsStorage), new ScoreIterationListener(1));
 
         // training
-        network.fit(iterator, epochs);
+//        network.fit(iterator, epochs);
 
 
         // testing
@@ -134,28 +141,28 @@ public class CNNHar {
 //        log.info(eval.stats(true));
 
         // save model
-        log.info("Save model....");
-//        String basePath = "/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/";
-        String basePath = "/Users/zhangyu/Desktop/mDeepBoost/Important/Data/nor_shuffle_data/";
-
-        ModelSerializer.writeModel(network, basePath + "model.bin", true);
-        log.info("Save model done!!");
-
-        // each epoc average
-        List<Double> averageList = new ArrayList<>();
-        Iterator<Integer> it = epocLoss.keySet().iterator();
-        while (it.hasNext()) {
-            int index = it.next();
-            List<Double> epocList = epocLoss.get(index);
-            int size = epocList.size();
-            double average = 0;
-            for (int i = 0; i < size; i++) {
-                average += epocList.get(i);
-            }
-            averageList.add(average / size);
-        }
-
-        System.out.println(averageList);
+//        log.info("Save model....");
+////        String basePath = "/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/";
+//        String basePath = "/Users/zhangyu/Desktop/mDeepBoost/Important/Data/nor_shuffle_data/";
+//
+//        ModelSerializer.writeModel(network, basePath + "model.bin", true);
+//        log.info("Save model done!!");
+//
+//        // each epoc average
+//        List<Double> averageList = new ArrayList<>();
+//        Iterator<Integer> it = epocLoss.keySet().iterator();
+//        while (it.hasNext()) {
+//            int index = it.next();
+//            List<Double> epocList = epocLoss.get(index);
+//            int size = epocList.size();
+//            double average = 0;
+//            for (int i = 0; i < size; i++) {
+//                average += epocList.get(i);
+//            }
+//            averageList.add(average / size);
+//        }
+//
+//        System.out.println(averageList);
     }
 
     /**

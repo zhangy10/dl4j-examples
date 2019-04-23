@@ -51,6 +51,18 @@ public class ZacTest {
         System.out.println(sub);
 
 
+        INDArray s = random.sub(1);
+        System.out.println("random - : " + random);
+        System.out.println(s);
+
+
+        INDArray s1 = random.subi(1);
+        System.out.println("random - i : " + random);
+        System.out.println(s1);
+
+
+
+
 //        File array = new File(file);
 
 //        Nd4j.saveBinary(random, array);

@@ -3,7 +3,11 @@ package org.deeplearning4j.examples.convolution.ZacCNN.DistriTest;
 import org.datavec.api.split.FileSplit;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
+import org.deeplearning4j.examples.convolution.ZacCNN.Config;
+import org.deeplearning4j.examples.convolution.ZacCNN.DataSet;
+import org.deeplearning4j.examples.convolution.ZacCNN.DataType;
 import org.deeplearning4j.examples.convolution.ZacCNN.HarReader;
+import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.util.ModelSerializer;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
@@ -24,19 +28,34 @@ public class HarEva {
         File model = new File("/Users/zhangyu/Desktop/" + "multi_model.bin");
         MultiLayerNetwork network = ModelSerializer.restoreMultiLayerNetwork(model);
 
+//        MultiLayerConfiguration config = network.getLayerWiseConfigurations();
+
         // testing
 //        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/nor_shuffle_data/1_test.csv");
 //        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/test.csv");
-        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/nor_test.csv");
+//        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/nor_test.csv");
+//        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/nor_train.csv");
 
-        HarReader reader = new HarReader(0, 1, 128, 9, 6, 9999, ',');
+
+        DataType type = DataType.OP;
+        Config config = DataSet.getConfig(type);
+
+        File testFile = new File(config.getTestPath());
+
+        HarReader reader = new HarReader(config.getNumLinesToSkip(), config.getHeight(), config.getWidth(), config.getChannel(),
+            config.getNumClasses(), config.getTaskNum(), config.getDelimiter());
         reader.initialize(new FileSplit(testFile));
 
-        DataSetIterator iterator = new RecordReaderDataSetIterator(reader, 16, 1, 6);
+        // only for PAMA test data
+//        reader.setLabelFromOne(false);
 
-//        DataNormalization normalizer = new NormalizerStandardize();
-//        normalizer.fit(iterator);
-//        iterator.setPreProcessor(normalizer);
+        DataSetIterator iterator = new RecordReaderDataSetIterator(reader, config.getBatchSize(), config.getLabelIndex(), config.getNumClasses());
+
+        if (config.isNoraml()) {
+            DataNormalization normalizer = new NormalizerStandardize();
+            normalizer.fit(iterator);
+            iterator.setPreProcessor(normalizer);
+        }
 
         Evaluation eval = network.evaluate(iterator);
 
