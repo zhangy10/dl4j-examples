@@ -28,6 +28,7 @@ import org.nd4j.linalg.learning.AdamUpdater;
 import org.nd4j.linalg.learning.GradientUpdater;
 import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.learning.config.IUpdater;
+import org.nd4j.linalg.learning.config.Nadam;
 import org.nd4j.linalg.learning.config.Sgd;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.nd4j.linalg.schedule.InverseSchedule;
@@ -51,7 +52,7 @@ public class TrainSplit extends Thread {
 
     private boolean isMaster = false;
 
-    private Settings settings;
+    private Config settings;
 
     private int slaveNum;
 
@@ -66,23 +67,23 @@ public class TrainSplit extends Thread {
     public boolean isEnd = false;
 
 
-    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Settings settings, boolean isLinked) {
+    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings, boolean isLinked) {
         this(sendQueue, id, settings);
         this.isLinked = isLinked;
     }
 
-    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Settings settings) {
+    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings) {
         this.sendQueue = sendQueue;
         this.id = id;
         this.settings = settings;
     }
 
-    public TrainSplit(int id, Settings settings, int slaveNum, boolean isLinked) {
+    public TrainSplit(int id, Config settings, int slaveNum, boolean isLinked) {
         this(id, settings, slaveNum);
         this.isLinked = isLinked;
     }
 
-    public TrainSplit(int id, Settings settings, int slaveNum) {
+    public TrainSplit(int id, Config settings, int slaveNum) {
         this(null, id, settings);
         this.isMaster = true;
         this.slaveNum = slaveNum;
@@ -225,7 +226,7 @@ public class TrainSplit extends Thread {
 //                w0 = model.params().dup();
 
                 // if last round, will not send the update to slaves
-                if (epoc != settings.epoch - 1) {
+                if (epoc != settings.getEpoch() - 1) {
                     Msg newMsg = new Msg();
                     newMsg.parameters = newP;
 //                        newMsg.l = l;
@@ -311,18 +312,18 @@ public class TrainSplit extends Thread {
     public void run() {
         long start = System.currentTimeMillis();
 
-        HarReader reader = new HarReader(settings.numLinesToSkip, settings.height,
-            settings.width, settings.channel, settings.numClasses, settings.taskNum, settings.delimiter);
+        HarReader reader = new HarReader(settings.getNumLinesToSkip(), settings.getHeight(),
+            settings.getWidth(), settings.getChannel(), settings.getNumClasses(), settings.getTaskNum(), settings.getDelimiter());
         try {
             reader.initialize(new FileSplit(settings.getFile()));
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        DataSetIterator iterator = new RecordReaderDataSetIterator(reader, settings.batchSize, settings.labelIndex, settings.numClasses);
+        DataSetIterator iterator = new RecordReaderDataSetIterator(reader, settings.getBatchSize(), settings.getLabelIndex(), settings.getNumClasses());
 
         //We need to normalize our data. We'll use NormalizeStandardize (which gives us mean 0, unit variance):
-        if (settings.isNoraml) {
+        if (settings.isNoraml()) {
             DataNormalization normalizer = new NormalizerStandardize();
             normalizer.fit(iterator);           //Collect the statistics (mean/stdev) from the training data. This does not modify the input data
             iterator.setPreProcessor(normalizer);
@@ -330,7 +331,7 @@ public class TrainSplit extends Thread {
 
         MultiLayerNetwork model = null;
         if (isMaster) {
-            MultiLayerConfiguration conf = getModelConf(settings.numClasses, settings.height, settings.width, settings.channel);
+            MultiLayerConfiguration conf = getModelConf(settings);
             // send conf to others
             Msg message = new Msg();
             message.confJosn = conf.toJson();
@@ -366,7 +367,7 @@ public class TrainSplit extends Thread {
         }
 
         model.setListeners(listener);
-        model.fit(iterator, settings.epoch);
+        model.fit(iterator, settings.getEpoch());
 
         long end = System.currentTimeMillis();
         // evaluate
@@ -415,29 +416,16 @@ public class TrainSplit extends Thread {
     }
 
 
-    public MultiLayerConfiguration getModelConf(int numLabels, int height, int width, int channels) {
-        double nonZeroBias = 1; //偏差
-        double dropOut = 0.8; //随机丢弃比例
-        long seed = 42;
-
-        int kernal = 64;
-        int pooling = 2;
-
-        // layer settings
-        int c1_out = 36;
-        int c2_out = 72;
-        int f1_out = 300;
-
-        double learnRate = 0.001;
-        double gamma = 0.5;
-
+    public MultiLayerConfiguration getModelConf(Config config) {
         return new NeuralNetConfiguration.Builder()
-                   .seed(seed)
+                   .seed(config.getSeed())
 //                                           .weightInit(WeightInit.NORMAL) //根据给定的分布采样参数
                    .weightInit(WeightInit.DISTRIBUTION)
                    .dist(new NormalDistribution(0.0, 1.0)) //均值为0，方差为1.0的正态分布
                    .activation(Activation.RELU)
-                   .updater(new Adam(learnRate))
+                   .updater(new Adam(config.getLearnRate()))
+                   // Adam is better
+//                   .updater(new Nadam(learnRate))
                    // increase by 1% over 0.001
 //                   .updater(new Adam(new InverseSchedule(ScheduleType.EPOCH, learnRate, gamma, 1)))
 //                .biasUpdater(new Nesterovs(new StepSchedule(ScheduleType.ITERATION, 2e-2, 0.1, 100000), 0.9))
@@ -446,57 +434,22 @@ public class TrainSplit extends Thread {
                    //采用除以梯度2范数来规范化梯度防止梯度消失或突变
                    .l2(5 * 1e-4)
                    .list() //13层的网络,第1,3层构建了alexnet计算层，目的是对当前输出的结果做平滑处理，参数有相邻核映射数n=5,规范化常亮k=2,指数常量beta=0.75，系数常量alpha=1e-4
-                   .layer(0, convNet("c1", channels, c1_out, new int[]{1, kernal}, new int[]{1, 1}, new int[]{0, 0}, 0))
+                   .layer(0, convNet("c1", config.getChannel(), config.getC1_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, 0))
                    // update padding issue
 //                                           .layer(0, convNet("c1", channels, 36, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 32}, 0))
-                   .layer(1, maxpooling("m1", new int[]{1, pooling}, new int[]{1, pooling}))
-                   .layer(2, convNet("c2", -1, c2_out, new int[]{1, kernal}, new int[]{1, 1}, new int[]{0, 0}, nonZeroBias))
+                   .layer(1, maxpooling("m1", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
+                   .layer(2, convNet("c2", -1, config.getC2_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
 //                                           .layer(2, convNet("c2", -1, 72, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 16}, nonZeroBias))
-                   .layer(3, maxpooling("m2", new int[]{1, pooling}, new int[]{1, pooling}))
-                   .layer(4, full("f1", f1_out, nonZeroBias, dropOut))
+                   .layer(3, maxpooling("m2", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
+                   .layer(4, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
                    .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
                                  .name("o1")
-                                 .nOut(numLabels)
+                                 .nOut(config.getNumClasses())
                                  .activation(Activation.SOFTMAX)
                                  .build())
                    .backprop(true)
-                   .setInputType(InputType.convolutional(height, width, channels))
+                   .setInputType(InputType.convolutional(config.getHeight(), config.getWidth(), config.getChannel()))
                    .build();
-    }
-
-    public static class Settings {
-        int epoch = 20;
-
-        //First: get the dataset using the record reader. CSVRecordReader handles loading/parsing
-        int numLinesToSkip = 0;
-        int taskNum = 7352;
-
-        char delimiter = ',';
-
-        //Second: the RecordReaderDataSetIterator handles conversion to DataSet objects, ready for use in neural network
-        // last pos is label
-        // by channel, the label index will be the second one, not actual label index
-        int labelIndex = 1;     //5 values in each row of the iris.txt CSV: 4 input features followed by an integer label (class) index. Labels are the 5th value (index 4) in each row
-
-        int numClasses = 6;     //3 classes (types of iris flowers) in the iris data set. Classes have integer values 0, 1 or 2
-        int batchSize = 8;
-
-        // channel * width = inputwidth
-        int channel = 9;
-        int height = 1;
-        int width = 128;
-
-        boolean isNoraml = false;
-        MultiLayerConfiguration conf;
-
-        public Settings(int numLinesToSkip, int taskNum) {
-            this.numLinesToSkip = numLinesToSkip;
-            this.taskNum = taskNum;
-        }
-
-        public File getFile() throws Exception {
-            return new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/nor_train.csv");
-        }
     }
 
     public class Msg {
@@ -525,20 +478,22 @@ public class TrainSplit extends Thread {
     }
 
     public static void main(String[] args) {
-        int taskNum = 15;
-        int total = 7352;
-        List<Pair> list = getTask(taskNum, total);
+        DataType type = DataType.OP;
+        int task = 1;
 
+        // split task
+        List<Pair> list = getTask(task, DataSet.getConfig(type).getTaskNum());
         System.out.println(list.toString());
-
+        // assgin task
         TrainSplit master = null;
         List<TrainSplit> slaveList = new ArrayList<>();
-        for (int i = 0; i < taskNum; i++) {
+        for (int i = 0; i < task; i++) {
             Pair fragment = list.get(i);
+            Config config = DataSet.getNewConfig(type);
             if (i == 0) {
-                master = new TrainSplit(i, new Settings(fragment.start, fragment.end), taskNum - 1);
+                master = new TrainSplit(i, config.setTaskRange(fragment.start, fragment.end), task - 1);
             } else {
-                TrainSplit slave = new TrainSplit(master.getQueue(), i, new Settings(fragment.start, fragment.end));
+                TrainSplit slave = new TrainSplit(master.getQueue(), i, config.setTaskRange(fragment.start, fragment.end));
                 master.addSlave(slave.getQueue());
                 slaveList.add(slave);
             }
