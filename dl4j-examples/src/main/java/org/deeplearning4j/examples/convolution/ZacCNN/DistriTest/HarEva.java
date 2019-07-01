@@ -25,7 +25,7 @@ public class HarEva {
 //        File model = new File("/Users/zhangyu/Desktop/" + "model.bin");
 //        File model = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/" + "model.bin");
 //        File model = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/nor_shuffle_data/" + "model.bin");
-        File model = new File("/Users/zhangyu/Desktop/" + "multi_model.bin");
+        File model = new File("/Users/zber/Desktop/" + "multi_model.bin");
         MultiLayerNetwork network = ModelSerializer.restoreMultiLayerNetwork(model);
 
 //        MultiLayerConfiguration config = network.getLayerWiseConfigurations();
@@ -37,7 +37,7 @@ public class HarEva {
 //        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/nor_train.csv");
 
 
-        DataType type = DataType.OP;
+        DataType type = DataType.HAR;
         Config config = DataSet.getConfig(type);
 
         File testFile = new File(config.getTestPath());
