@@ -128,11 +128,7 @@ public class CF10 {
 
         long end = System.currentTimeMillis();
 
-        // evaluation while training (the score should go down)
-        // Evaluate model:
-        Evaluation eval = net.evaluate(testIter);
-        System.out.println(eval.stats());
-
+        // save....
         ModelSerializer.writeModel(net, new File(basePath + "/cf10-model.zip"), true);
 
         System.out.println("Model Total num of params: " + net.numParams());
@@ -155,6 +151,13 @@ public class CF10 {
         }
 
         System.out.println(averageList);
+
+
+        // evaluation while training (the score should go down)
+        // Evaluate model:
+        Evaluation eval = net.evaluate(testIter);
+        System.out.println(eval.stats());
+
 
     }
 

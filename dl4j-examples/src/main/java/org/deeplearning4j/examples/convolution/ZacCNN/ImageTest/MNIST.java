@@ -138,11 +138,7 @@ public class MNIST {
 
         long end = System.currentTimeMillis();
 
-        // evaluation while training (the score should go down)
-        // Evaluate model:
-        Evaluation eval = net.evaluate(testIter);
-        System.out.println(eval.stats());
-
+        // save....
         ModelSerializer.writeModel(net, new File(basePath + "/minist-model.zip"), true);
 
         System.out.println("Model Total num of params: " + net.numParams());
@@ -165,6 +161,11 @@ public class MNIST {
         }
 
         System.out.println(averageList);
+
+        // evaluation while training (the score should go down)
+        // Evaluate model:
+        Evaluation eval = net.evaluate(testIter);
+        System.out.println(eval.stats());
     }
 
 

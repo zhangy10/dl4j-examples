@@ -15,6 +15,7 @@ import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.api.TrainingListener;
 import org.deeplearning4j.util.ModelSerializer;
+import org.nd4j.evaluation.classification.ROCMultiClass;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
@@ -334,8 +335,8 @@ public class TrainSplit extends Thread {
         MultiLayerNetwork model = null;
         if (isMaster) {
 
-//            MultiLayerConfiguration conf = lenet(settings);
-            MultiLayerConfiguration conf = alexnet(settings);
+            MultiLayerConfiguration conf = lenet(settings);
+//            MultiLayerConfiguration conf = alexnet(settings);
 
             // send conf to others
             Msg message = new Msg();
@@ -378,33 +379,7 @@ public class TrainSplit extends Thread {
         long end = System.currentTimeMillis();
 
         if (isMaster) {
-
-            // evaluate
-            File testFile = new File(settings.getTestPath());
-
-            HarReader testReader = new HarReader(settings.getNumLinesToSkip(), settings.getHeight(), settings.getWidth(), settings.getChannel(),
-                settings.getNumClasses(), settings.getTaskNum(), settings.getDelimiter());
-
-            try {
-                testReader.initialize(new FileSplit(testFile));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            DataSetIterator testIterator = new RecordReaderDataSetIterator(reader, settings.getBatchSize(),
-                settings.getLabelIndex(), settings.getNumClasses());
-
-            if (settings.isNoraml()) {
-                DataNormalization normalizer = new NormalizerStandardize();
-                normalizer.fit(testIterator);
-                testIterator.setPreProcessor(normalizer);
-            }
-
-            Evaluation eval = model.evaluate(iterator);
-            System.out.println(eval.stats());
-
             // result.....
-
             System.out.println("Save model....");
             String basePath = "/Users/zhangyu/Desktop/";
             try {
@@ -433,6 +408,31 @@ public class TrainSplit extends Thread {
             }
 
             System.out.println(averageList);
+
+
+            // evaluate ---------------
+            File testFile = new File(settings.getTestPath());
+
+            HarReader testReader = new HarReader(settings.getNumLinesToSkip(), settings.getHeight(), settings.getWidth(), settings.getChannel(),
+                settings.getNumClasses(), settings.getTaskNum(), settings.getDelimiter());
+
+            try {
+                testReader.initialize(new FileSplit(testFile));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            DataSetIterator testIterator = new RecordReaderDataSetIterator(testReader, settings.getBatchSize(),
+                settings.getLabelIndex(), settings.getNumClasses());
+
+            if (settings.isNoraml()) {
+                DataNormalization normalizer = new NormalizerStandardize();
+                normalizer.fit(testIterator);
+                testIterator.setPreProcessor(normalizer);
+            }
+
+            Evaluation eval = model.evaluate(testIterator);
+            System.out.println(eval.stats());
         }
     }
 
@@ -462,7 +462,7 @@ public class TrainSplit extends Thread {
     }
 
     public static void main(String[] args) {
-        DataType type = DataType.HAR;
+        DataType type = DataType.FALL;
         int task = 1;
 
         // split task

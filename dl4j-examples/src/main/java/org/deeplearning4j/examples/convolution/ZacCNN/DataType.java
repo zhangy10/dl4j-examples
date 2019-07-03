@@ -9,5 +9,6 @@ public enum DataType {
     TEST2,
     TEST3,
     EMG,
-    PAMA
+    PAMA,
+    FALL
 }

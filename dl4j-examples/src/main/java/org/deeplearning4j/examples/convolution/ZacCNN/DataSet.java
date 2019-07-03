@@ -80,6 +80,24 @@ public class DataSet {
                                       .isNormal(true)
                                       .setEpoch(20)
                                       .build());
+        // size: 116m done
+        dataMap.put(DataType.FALL, new Config.Builder()
+                                       .setDataPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/og_shuffle/Fall/train.csv")
+                                       .setTestPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/og_shuffle/Fall/test.csv")
+                                       .setTaskNum(10921)
+                                       .setChannel(1)
+                                       .setWidth(604)
+                                       .setNumClass(17)
+                                       .setBatch(16)
+                                       .setKernel(42)
+                                       .isNormal(true)
+                                       .setEpoch(20)
+                                       .build());
+
+
+
+
+        // -----------------------------------
 
         dataMap.put(DataType.TEST, new Config.Builder()
                                        .setDataPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/test/nor_train_t.csv")
