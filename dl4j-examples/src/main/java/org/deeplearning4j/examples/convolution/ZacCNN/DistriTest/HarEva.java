@@ -21,23 +21,18 @@ public class HarEva {
 
     public static void main(String[] args) throws Exception {
 
+        boolean isPhone = true;
         // read a model
-//        File model = new File("/Users/zhangyu/Desktop/" + "model.bin");
-//        File model = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/" + "model.bin");
-//        File model = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/nor_shuffle_data/" + "model.bin");
-        File model = new File("/Users/zhangyu/Desktop/" + "multi_model.bin");
+        File model = null;
+        if (isPhone) {
+            model = new File("/Users/zhangyu/Desktop/" + "model_phone.bin");
+        } else {
+            model = new File("/Users/zhangyu/Desktop/" + "multi_model.bin");
+        }
+
         MultiLayerNetwork network = ModelSerializer.restoreMultiLayerNetwork(model);
 
-//        MultiLayerConfiguration config = network.getLayerWiseConfigurations();
-
-        // testing
-//        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/nor_shuffle_data/1_test.csv");
-//        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/test.csv");
-//        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/nor_test.csv");
-//        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/nor_train.csv");
-
-
-        DataType type = DataType.OP;
+        DataType type = DataType.TEST3;
         Config config = DataSet.getConfig(type);
 
         File testFile = new File(config.getTestPath());

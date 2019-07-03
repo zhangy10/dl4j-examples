@@ -74,7 +74,7 @@ public class DualTask extends Thread {
     }
 
 
-//    public MultiLayerConfiguration getModelConf(int classNum, int h, int w, int channel) {
+//    public MultiLayerConfiguration lenet(int classNum, int h, int w, int channel) {
 //        long seed = 6;
 //
 //        return new NeuralNetConfiguration.Builder()
