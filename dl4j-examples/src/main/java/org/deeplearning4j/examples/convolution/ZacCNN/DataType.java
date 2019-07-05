@@ -8,6 +8,8 @@ public enum DataType {
     TEST,
     TEST2,
     TEST3,
+    TEST4,
+
     EMG,
     PAMA,
     FALL

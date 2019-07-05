@@ -32,7 +32,7 @@ public class HarEva {
 
         MultiLayerNetwork network = ModelSerializer.restoreMultiLayerNetwork(model);
 
-        DataType type = DataType.HAR;
+        DataType type = DataType.TEST3;
         Config config = DataSet.getConfig(type);
 
         File testFile = new File(config.getTestPath());

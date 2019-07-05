@@ -31,7 +31,7 @@ public class NormalConvert {
 
     public static void main(String[] args) throws Exception {
 
-        Config config = DataSet.getConfig(DataType.TEST3);
+        Config config = DataSet.getConfig(DataType.FALL);
 
 //        File ogFile = new File(config.getDataPath());
         File ogFile = new File(config.getTestPath());

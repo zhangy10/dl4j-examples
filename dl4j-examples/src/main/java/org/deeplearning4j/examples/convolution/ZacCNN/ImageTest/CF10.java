@@ -50,14 +50,14 @@ public class CF10 {
     static int width = 32;
 
     static int channels = 3; // single channel for grayscale images
-    static int outputNum = 10; // 10 digits classification
+    static int outputNum = 6; // 10 digits classification
 
     static int batchSize = 16;
     static int nEpochs = 20;
 //    static int iterations = 1;
 
-    static int balanceTrainSize = 700;
-    static int balanceTestSize = 300;
+    static int balanceTrainSize = 1200;
+    static int balanceTestSize = 500;
 
     public static void main(String[] args) throws Exception {
 

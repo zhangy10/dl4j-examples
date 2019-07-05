@@ -19,8 +19,8 @@ public class ZacTrain {
         new QLearning.QLConfiguration(
             123,   //Random seed
             20,//Max step By epoch
-            1000, //Max step
-            1000, //Max size of experience replay
+            10, //Max step
+            10, //Max size of experience replay
             32,    //size of batches
             10,   //target update (hard)
             0,     //num step noop warmup

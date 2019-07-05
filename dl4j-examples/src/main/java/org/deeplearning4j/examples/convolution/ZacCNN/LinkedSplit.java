@@ -11,8 +11,8 @@ public class LinkedSplit {
 
 
     public static void main(String[] args) {
-        int taskN = 15;
-        DataType type = DataType.HAR;
+        DataType type = DataType.EMG;
+        int taskN = 3;
 
         List<TrainSplit.Pair> list = TrainSplit.getTask(taskN, DataSet.getConfig(type).getTaskNum());
 
