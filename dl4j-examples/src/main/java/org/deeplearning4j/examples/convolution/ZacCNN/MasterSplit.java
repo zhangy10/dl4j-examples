@@ -7,7 +7,7 @@ public class MasterSplit {
 
 
     public static void main(String[] args) {
-        DataType type = DataType.FALL;
+        DataType type = DataType.TEST;
         int task = 1;
 
         // split task

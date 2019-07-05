@@ -7,11 +7,13 @@ public class DataSet {
 
     private static Map<DataType, Config> dataMap = new HashMap<>();
 
+    private static final String basePath = "/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/";
+
     static {
         // size: 160M done: good vs image
         dataMap.put(DataType.HAR, new Config.Builder()
-                                      .setDataPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/nor_data/Har/nor_train.csv")
-                                      .setTestPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/nor_data/Har/nor_test.csv")
+                                      .setDataPath(basePath + "nor_data/Har/nor_train.csv")
+                                      .setTestPath(basePath + "nor_data/Har/nor_test.csv")
                                       .setTaskNum(7352)
                                       .setChannel(9)
                                       .setWidth(128)
@@ -20,8 +22,8 @@ public class DataSet {
                                       .build());
         // size: 100M done: good
         dataMap.put(DataType.MHe, new Config.Builder()
-                                      .setDataPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/nor_data/mHealth/nor_train.csv")
-                                      .setTestPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/nor_data/mHealth/nor_test.csv")
+                                      .setDataPath(basePath + "nor_data/mHealth/nor_train.csv")
+                                      .setTestPath(basePath + "nor_data/mHealth/nor_test.csv")
                                       .setTaskNum(2339)
                                       .setChannel(23)
                                       .setWidth(100)
@@ -32,8 +34,8 @@ public class DataSet {
                                       .build());
         // size: 900M done: good
         dataMap.put(DataType.PAMA, new Config.Builder()
-                                       .setDataPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/nor_data/Pama2/nor_train.csv")
-                                       .setTestPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/nor_data/Pama2/nor_train.csv")
+                                       .setDataPath(basePath + "nor_data/Pama2/nor_train.csv")
+                                       .setTestPath(basePath + "nor_data/Pama2/nor_train.csv")
                                        .setTaskNum(11397)
                                        .setChannel(9)
                                        .setWidth(512)
@@ -58,8 +60,8 @@ public class DataSet {
 //                                       .build());
         // size: 500M done: good
         dataMap.put(DataType.OP, new Config.Builder()
-                                     .setDataPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/nor_data/Op/nor_train.csv")
-                                     .setTestPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/nor_data/Op/nor_test.csv")
+                                     .setDataPath(basePath + "nor_data/Op/nor_train.csv")
+                                     .setTestPath(basePath + "nor_data/Op/nor_test.csv")
                                      .setTaskNum(14046)
                                      .setChannel(77)
                                      .setWidth(25)
@@ -71,8 +73,8 @@ public class DataSet {
 
         // size: 25m done: good
         dataMap.put(DataType.EMG, new Config.Builder()
-                                      .setDataPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/nor_data/EMG/nor_train.csv")
-                                      .setTestPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/nor_data/EMG/nor_test.csv")
+                                      .setDataPath(basePath + "nor_data/EMG/nor_train.csv")
+                                      .setTestPath(basePath + "nor_data/EMG/nor_test.csv")
                                       .setTaskNum(8563)
                                       .setChannel(8)
                                       .setWidth(20)
@@ -84,8 +86,8 @@ public class DataSet {
                                       .build());
         // size: 116m done
         dataMap.put(DataType.FALL, new Config.Builder()
-                                       .setDataPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/nor_data/Fall/nor_train.csv")
-                                       .setTestPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/nor_data/Fall/nor_test.csv")
+                                       .setDataPath(basePath + "nor_data/Fall/nor_train.csv")
+                                       .setTestPath(basePath + "nor_data/Fall/nor_test.csv")
                                        .setTaskNum(8449)
                                        .setChannel(1)
                                        .setWidth(604)
@@ -100,8 +102,8 @@ public class DataSet {
         // -----------------------------------
 
         dataMap.put(DataType.TEST, new Config.Builder()
-                                       .setDataPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/test/nor_train_t.csv")
-                                       .setTestPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/test/nor_test_t.csv")
+                                       .setDataPath(basePath + "test/nor_train_t.csv")
+                                       .setTestPath(basePath + "test/nor_test_t.csv")
                                        .setTaskNum(120)
                                        .setChannel(9)
                                        .setWidth(128)
@@ -112,8 +114,8 @@ public class DataSet {
                                        .build());
 
         dataMap.put(DataType.TEST2, new Config.Builder()
-                                        .setDataPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/test2/nor_train_t2.csv")
-                                        .setTestPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/test2/nor_test_t2.csv")
+                                        .setDataPath(basePath + "test2/nor_train_t2.csv")
+                                        .setTestPath(basePath + "test2/nor_test_t2.csv")
                                         .setTaskNum(480)
                                         .setChannel(9)
                                         .setWidth(128)
@@ -124,8 +126,8 @@ public class DataSet {
                                         .build());
 
         dataMap.put(DataType.TEST3, new Config.Builder()
-                                        .setDataPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/test3/nor_train_t3.csv")
-                                        .setTestPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/test3/nor_test_t3.csv")
+                                        .setDataPath(basePath + "test3/nor_train_t3.csv")
+                                        .setTestPath(basePath + "test3/nor_test_t3.csv")
                                         .setTaskNum(1012)
                                         .setChannel(9)
                                         .setWidth(128)
@@ -137,8 +139,8 @@ public class DataSet {
 
 
         dataMap.put(DataType.TEST4, new Config.Builder()
-                                        .setDataPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/test4/nor_train_t4.csv")
-                                        .setTestPath("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/test4/nor_test_t4.csv")
+                                        .setDataPath(basePath + "test4/nor_train_t4.csv")
+                                        .setTestPath(basePath + "test4/nor_test_t4.csv")
                                         .setTaskNum(2100)
                                         .setChannel(9)
                                         .setWidth(128)
