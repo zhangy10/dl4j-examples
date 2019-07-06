@@ -58,25 +58,30 @@ public class TrainSplit extends Thread {
 
     public boolean isEnd = false;
 
+    private SplitListener splitListener;
+    private String modelFile;
 
-    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings, boolean isLinked) {
-        this(sendQueue, id, settings);
+
+    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings, boolean isLinked, SplitListener splitListener, String modelFile) {
+        this(sendQueue, id, settings, splitListener, modelFile);
         this.isLinked = isLinked;
     }
 
-    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings) {
+    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings, SplitListener splitListener, String modelFile) {
         this.sendQueue = sendQueue;
         this.id = id;
         this.settings = settings;
+        this.splitListener = splitListener;
+        this.modelFile = modelFile;
     }
 
-    public TrainSplit(int id, Config settings, int slaveNum, boolean isLinked) {
-        this(id, settings, slaveNum);
+    public TrainSplit(int id, Config settings, int slaveNum, boolean isLinked, SplitListener splitListener, String modelFile) {
+        this(id, settings, slaveNum, splitListener, modelFile);
         this.isLinked = isLinked;
     }
 
-    public TrainSplit(int id, Config settings, int slaveNum) {
-        this(null, id, settings);
+    public TrainSplit(int id, Config settings, int slaveNum, SplitListener splitListener, String modelFile) {
+        this(null, id, settings, splitListener, modelFile);
         this.isMaster = true;
         this.slaveNum = slaveNum;
         broadcast = new ArrayList<>();
@@ -143,7 +148,12 @@ public class TrainSplit extends Thread {
                 try {
                     int num = 0;
                     if (isLinked) {
-                        num = 1;
+                        if (slaveNum == 0) {
+                            num = 0;
+                        } else {
+                            // will only get 1 result from sub node
+                            num = 1;
+                        }
                     } else {
                         num = slaveNum;
                     }
@@ -160,9 +170,8 @@ public class TrainSplit extends Thread {
 //                    List<Double> lossSet = new ArrayList<>();
                 INDArray newP = model.params().dup();
 
-                if (isLinked) {
+                if (isLinked && slaveNum > 0) {
                     Msg newMsg = msgList.get(0);
-
 
                     newMsg.num++;
                     newMsg.parameters.muli(newMsg.num - 1);
@@ -311,6 +320,8 @@ public class TrainSplit extends Thread {
 
     @Override
     public void run() {
+        String output = "";
+
         long start = System.currentTimeMillis();
 
         HarReader reader = new HarReader(settings.getNumLinesToSkip(), settings.getHeight(),
@@ -384,18 +395,26 @@ public class TrainSplit extends Thread {
 
         if (isMaster) {
             // result.....
-            System.out.println("Save model....");
-            String basePath = "/Users/zhangyu/Desktop/";
+            String log0 = "Save model....to " + modelFile;
+            output += log0;
+            System.out.println(log0);
+//            String path = "/Users/zhangyu/Desktop/multi_model.bin";
             try {
-                ModelSerializer.writeModel(model, basePath + "multi_model.bin", true);
+//                ModelSerializer.writeModel(model, path, true);
+                ModelSerializer.writeModel(model, modelFile, true);
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
-            System.out.println("Model Total num of params: " + model.numParams());
-            System.out.println("Save model done!!");
-            System.out.println("Preprocess Total time: " + (process - start) / 1000);
-            System.out.println("Train Total time: " + (end - process) / 1000);
+            String log1 = "Model Total num of params: " + model.numParams();
+            System.out.println(log1);
+            String log2 = "Save model done!!";
+            System.out.println(log2);
+            String log3 = "Preprocess Total time: " + (process - start) / 1000;
+            System.out.println(log3);
+            String log4 = "Train Total time: " + (end - process) / 1000;
+            System.out.println(log4);
+            output += log1 + "\n" + log2 + "\n" + log3 + "\n" + log4 + "\n";
 
             // each epoc average
             List<Double> averageList = new ArrayList<>();
@@ -411,7 +430,9 @@ public class TrainSplit extends Thread {
                 averageList.add(average / size);
             }
 
-            System.out.println(averageList);
+            String array = averageList.toString();
+            output += array + "\n";
+            System.out.println(array);
 
 
             // evaluate ---------------
@@ -436,7 +457,13 @@ public class TrainSplit extends Thread {
             }
 
             Evaluation eval = model.evaluate(testIterator);
-            System.out.println(eval.stats());
+            String result = eval.stats();
+            output += result + "\n";
+            System.out.println(result);
+
+            if (splitListener != null) {
+                splitListener.trainDone(output);
+            }
         }
     }
 
