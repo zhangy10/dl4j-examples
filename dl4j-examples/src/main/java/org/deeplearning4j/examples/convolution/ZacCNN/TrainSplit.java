@@ -132,6 +132,30 @@ public class TrainSplit extends Thread {
 
         @Override
         public void onEpochEnd(Model model) {
+
+        }
+
+        @Override
+        public void onForwardPass(Model model, List<INDArray> activations) {
+
+        }
+
+        @Override
+        public void onForwardPass(Model model, Map<String, INDArray> activations) {
+
+        }
+
+        @Override
+        public void onGradientCalculation(Model model) {
+
+        }
+
+        @Override
+        public void onBackwardPass(Model model) {
+
+        }
+
+        private void sync(Model model) {
             // average loss value
             List<Double> lossList = epocLoss.get(epoc);
             double loss = 0;
@@ -295,26 +319,6 @@ public class TrainSplit extends Thread {
                 model.setParams(newP);
             }
         }
-
-        @Override
-        public void onForwardPass(Model model, List<INDArray> activations) {
-
-        }
-
-        @Override
-        public void onForwardPass(Model model, Map<String, INDArray> activations) {
-
-        }
-
-        @Override
-        public void onGradientCalculation(Model model) {
-
-        }
-
-        @Override
-        public void onBackwardPass(Model model) {
-
-        }
     };
 
 
@@ -465,6 +469,8 @@ public class TrainSplit extends Thread {
                 splitListener.trainDone(output);
             }
         }
+        // release memory
+        model.clear();
     }
 
     public class Msg {

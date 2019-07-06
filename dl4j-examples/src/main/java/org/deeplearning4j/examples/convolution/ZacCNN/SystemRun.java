@@ -26,9 +26,9 @@ public class SystemRun {
 
     private static void next(int index) {
         if (isMaster) {
-            new MasterSplit(index, DataType.TEST, basePath, donelistener).run();
+            new MasterSplit(index, type, basePath, donelistener).run();
         } else {
-            new LinkedSplit(index, DataType.TEST, basePath, donelistener).run();
+            new LinkedSplit(index, type, basePath, donelistener).run();
         }
     }
 
