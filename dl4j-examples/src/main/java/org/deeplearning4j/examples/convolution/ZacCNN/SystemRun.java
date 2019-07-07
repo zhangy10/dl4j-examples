@@ -9,7 +9,7 @@ public class SystemRun {
     static int index = 1;
 
 
-    public static SyncPolicy policy = SyncPolicy.HALF_EPOC;
+    public static SyncPolicy policy = SyncPolicy.EPOC;
 
 
     public static void main(String[] args) {
