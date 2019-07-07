@@ -88,7 +88,7 @@ public class DataSet {
         dataMap.put(DataType.FALL, new Config.Builder()
                                        .setDataPath(basePath + "nor_data/Fall/nor_train.csv")
                                        .setTestPath(basePath + "nor_data/Fall/nor_test.csv")
-                                       .setTaskNum(8449)
+                                       .setTaskNum(8448)
                                        .setChannel(1)
                                        .setWidth(604)
                                        .setNumClass(11)

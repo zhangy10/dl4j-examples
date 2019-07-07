@@ -61,6 +61,10 @@ public class TrainSplit extends Thread {
     private SplitListener splitListener;
     private String modelFile;
 
+    private int syncInterval = 0;
+    private int batchNum = 0;
+    private int lastSync = 0;
+
 
     public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings, boolean isLinked, SplitListener splitListener, String modelFile) {
         this(sendQueue, id, settings, splitListener, modelFile);
@@ -71,8 +75,13 @@ public class TrainSplit extends Thread {
         this.sendQueue = sendQueue;
         this.id = id;
         this.settings = settings;
+
         this.splitListener = splitListener;
         this.modelFile = modelFile;
+
+        this.batchNum = (int) Math.ceil(settings.getTaskNum() / (float) settings.getBatchSize());
+        this.syncInterval = (int) Math.floor(batchNum / (float) SystemRun.policy.getSyncNum());
+        this.lastSync = (batchNum / syncInterval) * syncInterval;
     }
 
     public TrainSplit(int id, Config settings, int slaveNum, boolean isLinked, SplitListener splitListener, String modelFile) {
@@ -97,12 +106,14 @@ public class TrainSplit extends Thread {
         }
     }
 
+    private int batchID;
 
     private TrainingListener listener = new TrainingListener() {
 
         @Override
         public void iterationDone(Model model, int iteration, int epoch) {
             epoc = epoch;
+            batchID = iteration;
             if (isMaster) {
                 MultiLayerNetwork network = (MultiLayerNetwork) model;
                 long bend = System.currentTimeMillis();
@@ -117,12 +128,45 @@ public class TrainSplit extends Thread {
 //                    e.printStackTrace();
 //                }
             }
+
+            // get average loss value
             List<Double> list = epocLoss.get(epoch);
             if (list == null) {
                 list = new ArrayList<>();
                 epocLoss.put(epoch, list);
             }
             list.add(model.score());
+
+            switch (SystemRun.policy) {
+                case BATCH:
+                    sync(model);
+                    break;
+                case HALF_EPOC:
+                    if (checkSync(iteration)) {
+                        sync(model);
+                    }
+                    break;
+            }
+        }
+
+        private boolean checkSync(int batchID) {
+            int index = batchID + 1;
+            int gap = index % batchNum;
+            if (lastSync == batchNum) {
+                // no odd issue
+                int smallGap = gap % syncInterval;
+                if (smallGap == 0) {
+                    return true;
+                }
+            } else {
+                if (gap != lastSync) {
+                    int smallGap = gap % syncInterval;
+                    if (gap == 0 || smallGap == 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         @Override
@@ -132,7 +176,10 @@ public class TrainSplit extends Thread {
 
         @Override
         public void onEpochEnd(Model model) {
-
+            System.out.println("[-------------onEpochEnd----------------] batchID: " + batchID);
+            if (SystemRun.policy == SystemRun.SyncPolicy.EPOC) {
+                sync(model);
+            }
         }
 
         @Override
@@ -156,6 +203,7 @@ public class TrainSplit extends Thread {
         }
 
         private void sync(Model model) {
+            System.out.println("[----------SYNC-----------] batchID: " + batchID);
             // average loss value
             List<Double> lossList = epocLoss.get(epoc);
             double loss = 0;
@@ -182,6 +230,7 @@ public class TrainSplit extends Thread {
                         num = slaveNum;
                     }
                     while (num > 0) {
+                        System.out.println("Master is [waiting]... left: " + num);
                         msgList.add(getQueue.take());
                         num--;
                         System.out.println("Master is taking... left: " + num);
@@ -260,19 +309,26 @@ public class TrainSplit extends Thread {
 //                w0 = model.params().dup();
 
                 // if last round, will not send the update to slaves
-                if (epoc != settings.getEpoch() - 1) {
-                    Msg newMsg = new Msg();
-                    newMsg.parameters = newP;
+
+                // TODO bug: if not send message back to slave, the memory will not be relesaed
+//                if (epoc != settings.getEpoch() - 1) {
+                Msg newMsg = new Msg();
+                newMsg.parameters = newP;
 //                        newMsg.l = l;
-                    int i = 0;
-                    for (BlockingQueue queue : broadcast) {
-                        queue.offer(newMsg);
-                        i++;
-                        System.out.println("master sending to " + i);
-                    }
+                int i = 0;
+                for (BlockingQueue queue : broadcast) {
+                    queue.offer(newMsg);
+                    i++;
+                    System.out.println("master sending to " + i);
                 }
+//                }
             } else {
                 Msg msg = new Msg();
+
+                // for test
+//                if (epoc == settings.getEpoch() - 1) {
+//                    System.out.println("-----------------------");
+//                }
 
                 // if linked, need frist get message from sub node, then send to root
                 if (isLinked && !isEnd) {

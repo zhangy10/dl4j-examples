@@ -2,11 +2,14 @@ package org.deeplearning4j.examples.convolution.ZacCNN;
 
 public class SystemRun {
 
-    static DataType type = DataType.TEST;
+    static DataType type = DataType.FALL;
     static boolean isMaster = true;
     static int maxTask = 3;
     static String basePath = "/Users/zhangyu/Desktop/";
     static int index = 1;
+
+
+    public static SyncPolicy policy = SyncPolicy.HALF_EPOC;
 
 
     public static void main(String[] args) {
@@ -32,32 +35,24 @@ public class SystemRun {
         }
     }
 
-
-    // sync frequency
-    public static int getSyncFrequency(Config config, SyncPolicy policy) {
-        if (config != null) {
-            int batchNum = (int) Math.ceil(config.getTaskNum() / (float) config.getBatchSize());
-            switch (policy) {
-                case EPOC:
-                    return batchNum;
-                case HALF_EPOC:
-
-                    break;
-                case QUART_EPOC:
-
-                    break;
-                case BATCH:
-
-                    break;
-            }
-        }
-        return 0;
-    }
-
     public enum SyncPolicy {
         EPOC,
-        HALF_EPOC,
-        QUART_EPOC,
-        BATCH
+        HALF_EPOC(2),
+        // TODO issues...
+//        QUART_EPOC(4),
+        BATCH;
+
+        private int syncNum = 0;
+
+        SyncPolicy() {
+        }
+
+        SyncPolicy(int syncNum) {
+            this.syncNum = syncNum;
+        }
+
+        public int getSyncNum() {
+            return syncNum;
+        }
     }
 }
