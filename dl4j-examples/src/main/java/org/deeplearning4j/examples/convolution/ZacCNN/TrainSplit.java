@@ -498,8 +498,9 @@ public class TrainSplit extends Thread {
             // evaluate ---------------
             File testFile = new File(settings.getTestPath());
 
+            // master test number will be current task number * (slave number + 1)
             HarReader testReader = new HarReader(settings.getNumLinesToSkip(), settings.getHeight(), settings.getWidth(), settings.getChannel(),
-                settings.getNumClasses(), settings.getTaskNum(), settings.getDelimiter());
+                settings.getNumClasses(), settings.getTaskNum() * (slaveNum + 1), settings.getDelimiter());
 
             try {
                 testReader.initialize(new FileSplit(testFile));
