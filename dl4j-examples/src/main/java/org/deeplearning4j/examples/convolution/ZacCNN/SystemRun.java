@@ -10,6 +10,7 @@ public class SystemRun {
 
 
     public static SyncPolicy policy = SyncPolicy.EPOC;
+    public static ModelLayer layerConfig = ModelLayer.THREE;
 
 
     public static void main(String[] args) {
@@ -54,5 +55,9 @@ public class SystemRun {
         public int getSyncNum() {
             return syncNum;
         }
+    }
+
+    public enum ModelLayer {
+        ONE, TWO, THREE;
     }
 }

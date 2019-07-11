@@ -40,8 +40,8 @@ public class ZacMDP implements MDP<ZacStep, Integer, DiscreteSpace> {
      * <p>
      * if step of each round is the last, then finish...
      */
-    final private static int MAX_STEP = 8;
-    final private static int ACTION_SIZE = 8;
+    final private static int MAX_STEP = 5;
+    final private static int ACTION_SIZE = 5;
     // this is state: each step will have all action values, step id : Va1, Va2, Va3...
     final private static ZacStep[] states = initStates(MAX_STEP, SEED);
 

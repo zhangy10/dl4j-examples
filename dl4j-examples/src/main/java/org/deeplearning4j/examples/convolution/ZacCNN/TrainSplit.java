@@ -590,7 +590,7 @@ public class TrainSplit extends Thread {
 
 
     public MultiLayerConfiguration lenet(Config config) {
-        return new NeuralNetConfiguration.Builder()
+        NeuralNetConfiguration.ListBuilder builder =  new NeuralNetConfiguration.Builder()
                    .seed(config.getSeed())
 //                                           .weightInit(WeightInit.NORMAL) //根据给定的分布采样参数
                    .weightInit(WeightInit.DISTRIBUTION)
@@ -614,13 +614,36 @@ public class TrainSplit extends Thread {
                    .layer(2, convNet("c2", -1, config.getC2_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
 //                                           .layer(2, convNet("c2", -1, 72, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 16}, nonZeroBias))
                    .layer(3, maxpooling("m2", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
-                   .layer(4, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
-                   .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
-                                 .name("o1")
-                                 .nOut(config.getNumClasses())
-                                 .activation(Activation.SOFTMAX)
-                                 .build())
-                   .backprop(true)
+                   .layer(4, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()));
+
+        switch (SystemRun.layerConfig) {
+            case ONE:
+                builder = builder.layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                                .name("o1")
+                                                .nOut(config.getNumClasses())
+                                                .activation(Activation.SOFTMAX)
+                                                .build());
+                break;
+            case TWO:
+                builder = builder.layer(5, full("f2", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                    .layer(6, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                  .name("o1")
+                                  .nOut(config.getNumClasses())
+                                  .activation(Activation.SOFTMAX)
+                                  .build());
+                break;
+            case THREE:
+                builder = builder.layer(5, full("f2", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(6, full("f3", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(7, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                            .name("o1")
+                                            .nOut(config.getNumClasses())
+                                            .activation(Activation.SOFTMAX)
+                                            .build());
+                break;
+        }
+
+        return builder.backprop(true)
                    .setInputType(InputType.convolutional(config.getHeight(), config.getWidth(), config.getChannel()))
                    .build();
     }
