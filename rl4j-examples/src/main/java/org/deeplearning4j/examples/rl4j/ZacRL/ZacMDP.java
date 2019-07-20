@@ -41,6 +41,7 @@ public class ZacMDP implements MDP<ZacStep, Integer, DiscreteSpace> {
      * if step of each round is the last, then finish...
      */
     final private static int MAX_STEP = 5;
+
     final private static int ACTION_SIZE = 5; // number of nodes
     final private static int numSleep = 1;
 

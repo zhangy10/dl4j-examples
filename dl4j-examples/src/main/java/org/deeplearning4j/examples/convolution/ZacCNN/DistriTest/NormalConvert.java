@@ -7,9 +7,11 @@ import org.datavec.api.util.ndarray.RecordConverter;
 import org.datavec.api.writable.NDArrayWritable;
 import org.datavec.api.writable.Writable;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
+import org.deeplearning4j.examples.convolution.ZacCNN.Config;
+import org.deeplearning4j.examples.convolution.ZacCNN.DataType;
 import org.deeplearning4j.examples.convolution.ZacCNN.HarReader;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.dataset.DataSet;
+import org.deeplearning4j.examples.convolution.ZacCNN.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
@@ -29,38 +31,31 @@ public class NormalConvert {
 
     public static void main(String[] args) throws Exception {
 
-        // train not normal
-//        File trainFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/x_train.csv");
-//        File trainFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/nor_shuffle_data/1_train.csv");
-//        int trainNum = 7352;
+        Config config = DataSet.getConfig(DataType.FALL);
 
-//        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/nor_shuffle_data/1_test.csv");
-        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/test.csv");
-        int trainNum = 9999;
+//        File ogFile = new File(config.getDataPath());
+        File ogFile = new File(config.getTestPath());
 
-        HarReader reader = new HarReader(0, 1, 128, 9, 6, trainNum, ',');
-        reader.initialize(new FileSplit(testFile));
+        HarReader reader = new HarReader(config.getNumLinesToSkip(), config.getHeight(), config.getWidth(), config.getChannel(),
+            config.getNumClasses(), config.getTaskNum(), config.getDelimiter());
+        reader.initialize(new FileSplit(ogFile));
 
-        DataSetIterator iterator = new RecordReaderDataSetIterator(reader, 16, 1, 6);
+        DataSetIterator iterator = new RecordReaderDataSetIterator(reader, config.getBatchSize(), config.getLabelIndex(), config.getNumClasses());
 
         DataNormalization normalizer = new NormalizerStandardize();
         normalizer.fit(iterator);
         iterator.setPreProcessor(normalizer);
 
 
-        // save to csv
-        String split = ",";
-//        File nor_train = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/nor_train.csv");
-
-        File nor_test = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/nor_test.csv");
-        BufferedOutputStream fout = new BufferedOutputStream(new FileOutputStream(nor_test));
+        File outputFile = new File("/Users/zhangyu/Desktop/nor_file.csv");
+        BufferedOutputStream fout = new BufferedOutputStream(new FileOutputStream(outputFile));
 
 
 //        DataOutputStream dout = new DataOutputStream()
         int count = 0;
         while (iterator.hasNext()) {
             // already prepocess.... did!!
-            DataSet batch = iterator.next();
+            org.nd4j.linalg.dataset.DataSet batch = iterator.next();
 
             // transform multi-channel to one line
             INDArray f = batch.getFeatures();

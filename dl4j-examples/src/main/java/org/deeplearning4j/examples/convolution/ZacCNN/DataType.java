@@ -1,16 +1,15 @@
 package org.deeplearning4j.examples.convolution.ZacCNN;
 
-public enum  DataType {
+public enum DataType {
     HAR,
     OP,
     MHe,
-    DF,
-    PAMA,
-    AAL,
+    //    DF,
+    TEST,
+    TEST2,
+    TEST3,
+    TEST4,
     EMG,
-    EEG,
-    EE,
-    EES,
-    FALL,
-    SIS
+    PAMA,
+    FALL
 }

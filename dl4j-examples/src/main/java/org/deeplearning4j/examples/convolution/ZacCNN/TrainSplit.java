@@ -1,8 +1,8 @@
 package org.deeplearning4j.examples.convolution.ZacCNN;
 
 import org.datavec.api.split.FileSplit;
-import org.datavec.api.util.ClassPathResource;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
+import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.api.Model;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.GradientNormalization;
@@ -10,29 +10,22 @@ import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.distribution.NormalDistribution;
 import org.deeplearning4j.nn.conf.inputs.InputType;
-import org.deeplearning4j.nn.conf.layers.ConvolutionLayer;
-import org.deeplearning4j.nn.conf.layers.DenseLayer;
-import org.deeplearning4j.nn.conf.layers.OutputLayer;
-import org.deeplearning4j.nn.conf.layers.SubsamplingLayer;
+import org.deeplearning4j.nn.conf.layers.*;
+import org.deeplearning4j.nn.conf.preprocessor.CnnToRnnPreProcessor;
+import org.deeplearning4j.nn.conf.preprocessor.RnnToCnnPreProcessor;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.api.TrainingListener;
 import org.deeplearning4j.util.ModelSerializer;
+import org.nd4j.evaluation.classification.ROCMultiClass;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
 import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.learning.AdamUpdater;
-import org.nd4j.linalg.learning.GradientUpdater;
 import org.nd4j.linalg.learning.config.Adam;
-import org.nd4j.linalg.learning.config.IUpdater;
-import org.nd4j.linalg.learning.config.Nadam;
-import org.nd4j.linalg.learning.config.Sgd;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
-import org.nd4j.linalg.schedule.InverseSchedule;
-import org.nd4j.linalg.schedule.ScheduleType;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,31 +53,47 @@ public class TrainSplit extends Thread {
 
     private Map<Integer, List<Double>> epocLoss = new TreeMap<>();
 
+    private long bstart;
+
 //    private INDArray w0 = null;
 
     private boolean isLinked = false;
 
     public boolean isEnd = false;
 
+    private SplitListener splitListener;
+    private String modelFile;
 
-    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings, boolean isLinked) {
-        this(sendQueue, id, settings);
+    private int syncInterval = 0;
+    private int batchNum = 0;
+    private int lastSync = 0;
+
+
+    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings, boolean isLinked, SplitListener splitListener, String modelFile) {
+        this(sendQueue, id, settings, splitListener, modelFile);
         this.isLinked = isLinked;
     }
 
-    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings) {
+    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings, SplitListener splitListener, String modelFile) {
         this.sendQueue = sendQueue;
         this.id = id;
         this.settings = settings;
+
+        this.splitListener = splitListener;
+        this.modelFile = modelFile;
+
+        this.batchNum = (int) Math.ceil(settings.getTaskNum() / (float) settings.getBatchSize());
+        this.syncInterval = (int) Math.floor(batchNum / (float) SystemRun.policy.getSyncNum());
+        this.lastSync = (batchNum / syncInterval) * syncInterval;
     }
 
-    public TrainSplit(int id, Config settings, int slaveNum, boolean isLinked) {
-        this(id, settings, slaveNum);
+    public TrainSplit(int id, Config settings, int slaveNum, boolean isLinked, SplitListener splitListener, String modelFile) {
+        this(id, settings, slaveNum, splitListener, modelFile);
         this.isLinked = isLinked;
     }
 
-    public TrainSplit(int id, Config settings, int slaveNum) {
-        this(null, id, settings);
+    public TrainSplit(int id, Config settings, int slaveNum, SplitListener splitListener, String modelFile) {
+        this(null, id, settings, splitListener, modelFile);
         this.isMaster = true;
         this.slaveNum = slaveNum;
         broadcast = new ArrayList<>();
@@ -100,32 +109,104 @@ public class TrainSplit extends Thread {
         }
     }
 
+    private int batchID;
 
     private TrainingListener listener = new TrainingListener() {
 
         @Override
         public void iterationDone(Model model, int iteration, int epoch) {
             epoc = epoch;
+            batchID = iteration;
             if (isMaster) {
                 MultiLayerNetwork network = (MultiLayerNetwork) model;
+                long bend = System.currentTimeMillis();
+                long time = bend - bstart;
+                bstart = bend;
                 System.out.println("master iteration done: " + iteration + " model score: " + model.score() + " epoch: " + epoch +
-                                       " learning rate: " + network.getLearningRate(0));
+                                       " learning rate: " + network.getLearningRate(0) + " time: " + time);
+//                System.out.println("Last Time: " + network.getLastEtlTime());
+//                try {
+//                    Thread.sleep(1000);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
             }
+
+            // get average loss value
             List<Double> list = epocLoss.get(epoch);
             if (list == null) {
                 list = new ArrayList<>();
                 epocLoss.put(epoch, list);
             }
             list.add(model.score());
+
+            switch (SystemRun.policy) {
+                case BATCH:
+                    sync(model);
+                    break;
+                case HALF_EPOC:
+                    if (checkSync(iteration)) {
+                        sync(model);
+                    }
+                    break;
+            }
+        }
+
+        private boolean checkSync(int batchID) {
+            int index = batchID + 1;
+            int gap = index % batchNum;
+            if (lastSync == batchNum) {
+                // no odd issue
+                int smallGap = gap % syncInterval;
+                if (smallGap == 0) {
+                    return true;
+                }
+            } else {
+                if (gap != lastSync) {
+                    int smallGap = gap % syncInterval;
+                    if (gap == 0 || smallGap == 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         @Override
         public void onEpochStart(Model model) {
-
+            bstart = System.currentTimeMillis();
         }
 
         @Override
         public void onEpochEnd(Model model) {
+            System.out.println("[-------------onEpochEnd----------------] batchID: " + batchID);
+            if (SystemRun.policy == SystemRun.SyncPolicy.EPOC) {
+                sync(model);
+            }
+        }
+
+        @Override
+        public void onForwardPass(Model model, List<INDArray> activations) {
+
+        }
+
+        @Override
+        public void onForwardPass(Model model, Map<String, INDArray> activations) {
+
+        }
+
+        @Override
+        public void onGradientCalculation(Model model) {
+
+        }
+
+        @Override
+        public void onBackwardPass(Model model) {
+
+        }
+
+        private void sync(Model model) {
+            System.out.println("[----------SYNC-----------] batchID: " + batchID);
             // average loss value
             List<Double> lossList = epocLoss.get(epoc);
             double loss = 0;
@@ -142,11 +223,17 @@ public class TrainSplit extends Thread {
                 try {
                     int num = 0;
                     if (isLinked) {
-                        num = 1;
+                        if (slaveNum == 0) {
+                            num = 0;
+                        } else {
+                            // will only get 1 result from sub node
+                            num = 1;
+                        }
                     } else {
                         num = slaveNum;
                     }
                     while (num > 0) {
+                        System.out.println("Master is [waiting]... left: " + num);
                         msgList.add(getQueue.take());
                         num--;
                         System.out.println("Master is taking... left: " + num);
@@ -159,9 +246,8 @@ public class TrainSplit extends Thread {
 //                    List<Double> lossSet = new ArrayList<>();
                 INDArray newP = model.params().dup();
 
-                if (isLinked) {
+                if (isLinked && slaveNum > 0) {
                     Msg newMsg = msgList.get(0);
-
 
                     newMsg.num++;
                     newMsg.parameters.muli(newMsg.num - 1);
@@ -226,19 +312,26 @@ public class TrainSplit extends Thread {
 //                w0 = model.params().dup();
 
                 // if last round, will not send the update to slaves
-                if (epoc != settings.getEpoch() - 1) {
-                    Msg newMsg = new Msg();
-                    newMsg.parameters = newP;
+
+                // TODO bug: if not send message back to slave, the memory will not be relesaed
+//                if (epoc != settings.getEpoch() - 1) {
+                Msg newMsg = new Msg();
+                newMsg.parameters = newP;
 //                        newMsg.l = l;
-                    int i = 0;
-                    for (BlockingQueue queue : broadcast) {
-                        queue.offer(newMsg);
-                        i++;
-                        System.out.println("master sending to " + i);
-                    }
+                int i = 0;
+                for (BlockingQueue queue : broadcast) {
+                    queue.offer(newMsg);
+                    i++;
+                    System.out.println("master sending to " + i);
                 }
+//                }
             } else {
                 Msg msg = new Msg();
+
+                // for test
+//                if (epoc == settings.getEpoch() - 1) {
+//                    System.out.println("-----------------------");
+//                }
 
                 // if linked, need frist get message from sub node, then send to root
                 if (isLinked && !isEnd) {
@@ -285,31 +378,13 @@ public class TrainSplit extends Thread {
                 model.setParams(newP);
             }
         }
-
-        @Override
-        public void onForwardPass(Model model, List<INDArray> activations) {
-
-        }
-
-        @Override
-        public void onForwardPass(Model model, Map<String, INDArray> activations) {
-
-        }
-
-        @Override
-        public void onGradientCalculation(Model model) {
-
-        }
-
-        @Override
-        public void onBackwardPass(Model model) {
-
-        }
     };
 
 
     @Override
     public void run() {
+        String output = "";
+
         long start = System.currentTimeMillis();
 
         HarReader reader = new HarReader(settings.getNumLinesToSkip(), settings.getHeight(),
@@ -329,15 +404,32 @@ public class TrainSplit extends Thread {
             iterator.setPreProcessor(normalizer);
         }
 
+        long process = System.currentTimeMillis();
+
         MultiLayerNetwork model = null;
         if (isMaster) {
-            MultiLayerConfiguration conf = getModelConf(settings);
+
+            /**
+             * switich model here----------------
+             *
+             */
+            MultiLayerConfiguration conf = lenet(settings);
+//            MultiLayerConfiguration conf = alexnet(settings);
+
             // send conf to others
             Msg message = new Msg();
             message.confJosn = conf.toJson();
 
             model = new MultiLayerNetwork(conf);
             model.init();
+
+            // for test, save model
+//            try {
+//                Nd4j.saveBinary(model.params(), new File("/Users/zhangyu/Desktop/test/cache"));
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+
             // send init to others
             message.parameters = model.params();
 
@@ -366,21 +458,35 @@ public class TrainSplit extends Thread {
             }
         }
 
+        System.out.println("Total num of params: " + model.numParams());
         model.setListeners(listener);
         model.fit(iterator, settings.getEpoch());
 
         long end = System.currentTimeMillis();
-        // evaluate
+
         if (isMaster) {
-            System.out.println("Save model....");
-            String basePath = "/Users/zber/Desktop/";
+
+            // result.....
+            String log0 = "Save model....to " + modelFile;
+            output += log0;
+            System.out.println(log0);
+//            String path = "/Users/zhangyu/Desktop/multi_model.bin";
             try {
-                ModelSerializer.writeModel(model, basePath + "multi_model.bin", true);
+//                ModelSerializer.writeModel(model, path, true);
+                ModelSerializer.writeModel(model, modelFile, true);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            System.out.println("Save model done!!");
-            System.out.println("Total time: " + (end - start) / 1000);
+
+            String log1 = "Model Total num of params: " + model.numParams();
+            System.out.println(log1);
+            String log2 = "Save model done!!";
+            System.out.println(log2);
+            String log3 = "Preprocess Total time: " + (process - start) / 1000;
+            System.out.println(log3);
+            String log4 = "Train Total time: " + (end - process) / 1000;
+            System.out.println(log4);
+            output += log1 + "\n" + log2 + "\n" + log3 + "\n" + log4 + "\n";
 
             // each epoc average
             List<Double> averageList = new ArrayList<>();
@@ -396,60 +502,44 @@ public class TrainSplit extends Thread {
                 averageList.add(average / size);
             }
 
-            System.out.println(averageList);
+            String array = averageList.toString();
+            output += array + "\n";
+            System.out.println(array);
+
+
+            // evaluate ---------------
+            File testFile = new File(settings.getTestPath());
+
+            // master test number will be current task number * (slave number + 1)
+            HarReader testReader = new HarReader(settings.getNumLinesToSkip(), settings.getHeight(), settings.getWidth(), settings.getChannel(),
+                settings.getNumClasses(), settings.getTaskNum() * (slaveNum + 1), settings.getDelimiter());
+
+            try {
+                testReader.initialize(new FileSplit(testFile));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            DataSetIterator testIterator = new RecordReaderDataSetIterator(testReader, settings.getBatchSize(),
+                settings.getLabelIndex(), settings.getNumClasses());
+
+            if (settings.isNoraml()) {
+                DataNormalization normalizer = new NormalizerStandardize();
+                normalizer.fit(testIterator);
+                testIterator.setPreProcessor(normalizer);
+            }
+
+            Evaluation eval = model.evaluate(testIterator);
+            String result = eval.stats();
+            output += result + "\n";
+            System.out.println(result);
+
+            if (splitListener != null) {
+                splitListener.trainDone(output);
+            }
         }
-    }
-
-    private ConvolutionLayer convNet(String name, int in, int out, int[] kernel, int[] stride, int[] pad, double bias) {
-        if (in == -1) {
-            return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nOut(out).biasInit(bias).convolutionMode(ConvolutionMode.Same).build();
-        }
-        return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nIn(in).nOut(out).biasInit(bias).convolutionMode(ConvolutionMode.Same).build();
-    }
-
-    private SubsamplingLayer maxpooling(String name, int[] kernel, int[] stride) {
-        return new SubsamplingLayer.Builder(kernel, stride).name(name).build();
-    }
-
-    private DenseLayer full(String name, int out, double bias, double dropOut) {
-        return new DenseLayer.Builder().name(name).nOut(out).biasInit(bias).dropOut(dropOut).dist(new NormalDistribution(0, 1)).build();
-    }
-
-
-    public MultiLayerConfiguration getModelConf(Config config) {
-        return new NeuralNetConfiguration.Builder()
-                   .seed(config.getSeed())
-//                                           .weightInit(WeightInit.NORMAL) //根据给定的分布采样参数
-                   .weightInit(WeightInit.DISTRIBUTION)
-                   .dist(new NormalDistribution(0.0, 1.0)) //均值为0，方差为1.0的正态分布
-                   .activation(Activation.RELU)
-                   .updater(new Adam(config.getLearnRate()))
-                   // Adam is better
-//                   .updater(new Nadam(learnRate))
-                   // increase by 1% over 0.001
-//                   .updater(new Adam(new InverseSchedule(ScheduleType.EPOCH, learnRate, gamma, 1)))
-//                .biasUpdater(new Nesterovs(new StepSchedule(ScheduleType.ITERATION, 2e-2, 0.1, 100000), 0.9))
-
-                   .gradientNormalization(GradientNormalization.RenormalizeL2PerLayer) // normalize to prevent vanishing or exploding gradients
-                   //采用除以梯度2范数来规范化梯度防止梯度消失或突变
-                   .l2(5 * 1e-4)
-                   .list() //13层的网络,第1,3层构建了alexnet计算层，目的是对当前输出的结果做平滑处理，参数有相邻核映射数n=5,规范化常亮k=2,指数常量beta=0.75，系数常量alpha=1e-4
-                   .layer(0, convNet("c1", config.getChannel(), config.getC1_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, 0))
-                   // update padding issue
-//                                           .layer(0, convNet("c1", channels, 36, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 32}, 0))
-                   .layer(1, maxpooling("m1", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
-                   .layer(2, convNet("c2", -1, config.getC2_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
-//                                           .layer(2, convNet("c2", -1, 72, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 16}, nonZeroBias))
-                   .layer(3, maxpooling("m2", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
-                   .layer(4, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
-                   .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
-                                 .name("o1")
-                                 .nOut(config.getNumClasses())
-                                 .activation(Activation.SOFTMAX)
-                                 .build())
-                   .backprop(true)
-                   .setInputType(InputType.convolutional(config.getHeight(), config.getWidth(), config.getChannel()))
-                   .build();
+        // release memory
+        model.clear();
     }
 
     public class Msg {
@@ -477,32 +567,7 @@ public class TrainSplit extends Thread {
         }
     }
 
-    public static void main(String[] args) {
-        DataType type = DataType.HAR;
-        int task = 1;
 
-        // split task
-        List<Pair> list = getTask(task, DataSet.getConfig(type).getTaskNum());
-        System.out.println(list.toString());
-        // assgin task
-        TrainSplit master = null;
-        List<TrainSplit> slaveList = new ArrayList<>();
-        for (int i = 0; i < task; i++) {
-            Pair fragment = list.get(i);
-            Config config = DataSet.getNewConfig(type);
-            if (i == 0) {
-                master = new TrainSplit(i, config.setTaskRange(fragment.start, fragment.end), task - 1);
-            } else {
-                TrainSplit slave = new TrainSplit(master.getQueue(), i, config.setTaskRange(fragment.start, fragment.end));
-                master.addSlave(slave.getQueue());
-                slaveList.add(slave);
-            }
-        }
-        master.start();
-        for (TrainSplit t : slaveList) {
-            t.start();
-        }
-    }
 
     public static List<Pair> getTask(int taskNum, int total) {
         int doNum = total / taskNum;
@@ -521,4 +586,144 @@ public class TrainSplit extends Thread {
         }
         return list;
     }
+
+    private ConvolutionLayer convNet(String name, int in, int out, int[] kernel, int[] stride, int[] pad, double bias) {
+        if (in == -1) {
+            return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nOut(out).biasInit(bias).convolutionMode(ConvolutionMode.Same).build();
+        }
+        return new ConvolutionLayer.Builder(kernel, stride, pad).name(name).nIn(in).nOut(out).biasInit(bias).convolutionMode(ConvolutionMode.Same).build();
+    }
+
+    private SubsamplingLayer maxpooling(String name, int[] kernel, int[] stride) {
+        return new SubsamplingLayer.Builder(kernel, stride).name(name).build();
+    }
+
+    private DenseLayer full(String name, int out, double bias, double dropOut) {
+        return new DenseLayer.Builder().name(name).nOut(out).biasInit(bias).dropOut(dropOut).dist(new NormalDistribution(0, 1)).build();
+    }
+
+    private LSTM lstm(String name, int out, double bias, double dropOut) {
+        return new LSTM.Builder().name(name).nOut(out).biasInit(bias).dropOut(dropOut).dist(new NormalDistribution(0, 1))
+                   .activation(Activation.TANH).build();
+    }
+
+
+    public MultiLayerConfiguration lenet(Config config) {
+        InputType inputType = InputType.convolutional(config.getHeight(), config.getWidth(), config.getChannel());
+
+        NeuralNetConfiguration.ListBuilder builder = new NeuralNetConfiguration.Builder()
+                                                         .seed(config.getSeed())
+//                                           .weightInit(WeightInit.NORMAL) //根据给定的分布采样参数
+                                                         .weightInit(WeightInit.DISTRIBUTION)
+                                                         .dist(new NormalDistribution(0.0, 1.0)) //均值为0，方差为1.0的正态分布
+                                                         .activation(Activation.RELU)
+                                                         .updater(new Adam(config.getLearnRate()))
+                                                         // Adam is better
+//                   .updater(new Nadam(learnRate))
+                                                         // increase by 1% over 0.001
+//                   .updater(new Adam(new InverseSchedule(ScheduleType.EPOCH, learnRate, gamma, 1)))
+//                .biasUpdater(new Nesterovs(new StepSchedule(ScheduleType.ITERATION, 2e-2, 0.1, 100000), 0.9))
+
+                                                         .gradientNormalization(GradientNormalization.RenormalizeL2PerLayer) // normalize to prevent vanishing or exploding gradients
+                                                         //采用除以梯度2范数来规范化梯度防止梯度消失或突变
+                                                         .l2(5 * 1e-4)
+                                                         .list() //13层的网络,第1,3层构建了alexnet计算层，目的是对当前输出的结果做平滑处理，参数有相邻核映射数n=5,规范化常亮k=2,指数常量beta=0.75，系数常量alpha=1e-4
+                                                         .layer(0, convNet("c1", config.getChannel(), config.getC1_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, 0))
+                                                         // update padding issue
+//                                           .layer(0, convNet("c1", channels, 36, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 32}, 0))
+                                                         .layer(1, maxpooling("m1", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
+                                                         .layer(2, convNet("c2", -1, config.getC2_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
+//                                           .layer(2, convNet("c2", -1, 72, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 16}, nonZeroBias))
+                                                         .layer(3, maxpooling("m2", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
+                                                         .setInputType(inputType);
+
+        switch (SystemRun.layerConfig) {
+            case ONE:
+                builder = builder.layer(4, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                            .name("o1")
+                                            .nOut(config.getNumClasses())
+                                            .activation(Activation.SOFTMAX)
+                                            .build());
+                break;
+            case TWO:
+                builder = builder.layer(4, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(5, full("f2", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(6, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                            .name("o1")
+                                            .nOut(config.getNumClasses())
+                                            .activation(Activation.SOFTMAX)
+                                            .build());
+                break;
+            case THREE:
+                builder = builder.layer(4, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(5, full("f2", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(6, full("f3", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(7, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                            .name("o1")
+                                            .nOut(config.getNumClasses())
+                                            .activation(Activation.SOFTMAX)
+                                            .build());
+                break;
+            case LSTM:
+                builder = builder.layer(4, lstm("l1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(5, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(6, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                            .name("o1")
+                                            .nOut(config.getNumClasses())
+                                            .activation(Activation.SOFTMAX)
+                                            .build());
+//                              .layer(5, new RnnOutputLayer.Builder(LossFunctions.LossFunction.MCXENT).activation(Activation.SOFTMAX)
+//                                            .name("ro1")
+//                                            .nOut(config.getNumClasses()).build());
+
+//                // for cnn to lstm + rnn
+//                return builder.inputPreProcessor(4, InputTypeUtil.getPreprocessorForInputTypeRnnLayers(inputType, null)).build();
+                break;
+        }
+        return builder.backprop(true)
+                   .build();
+    }
+
+    public MultiLayerConfiguration alexnet(Config config) {
+        /**
+         * AlexNet model interpretation based on the original paper ImageNet Classification with Deep Convolutional Neural Networks
+         * and the imagenetExample code referenced.
+         * http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
+         **/
+
+        return new NeuralNetConfiguration.Builder()
+                   .seed(config.getSeed())
+                   .weightInit(WeightInit.DISTRIBUTION) //根据给定的分布采样参数
+                   .dist(new NormalDistribution(0.0, 0.01)) //均值为0，方差为0.01的正态分布
+                   .activation(Activation.RELU)
+                   .updater(new Adam(0.001))
+//                                           .updater(new Nesterovs(new StepSchedule(ScheduleType.ITERATION, 1e-2, 0.1, 100000), 0.9))
+//                                           .biasUpdater(new Nesterovs(new StepSchedule(ScheduleType.ITERATION, 2e-2, 0.1, 100000), 0.9))
+                   .gradientNormalization(GradientNormalization.RenormalizeL2PerLayer) // normalize to prevent vanishing or exploding gradients
+                   //采用除以梯度2范数来规范化梯度防止梯度消失或突变
+                   .l2(5 * 1e-4)
+                   .list() //13层的网络,第1,3层构建了alexnet计算层，目的是对当前输出的结果做平滑处理，
+                   // 参数有相邻核映射数n=5,规范化常亮k=2,指数常量beta=0.75，系数常量alpha=1e-4
+                   .layer(0, convNet("c1", config.getChannel(), config.getC1_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, 0))
+                   .layer(1, new LocalResponseNormalization.Builder().name("lrn1").build())
+                   .layer(2, maxpooling("m1", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
+                   .layer(3, convNet("c2", -1, config.getC2_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
+                   .layer(4, new LocalResponseNormalization.Builder().name("lrn2").build())
+                   .layer(5, maxpooling("m2", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
+                   .layer(6, convNet("c3", -1, 90, new int[]{1, 32}, new int[]{1, 1}, new int[]{0, 0}, 0))
+                   .layer(7, convNet("c4", -1, 90, new int[]{1, 32}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
+                   .layer(8, convNet("c5", -1, 72, new int[]{1, 32}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
+                   .layer(9, maxpooling("m3", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
+                   .layer(10, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                   .layer(11, full("f2", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                   .layer(12, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                  .name("o1")
+                                  .nOut(config.getNumClasses())
+                                  .activation(Activation.SOFTMAX)
+                                  .build())
+                   .setInputType(InputType.convolutionalFlat(config.getHeight(), config.getWidth(), config.getChannel())) // InputType.convolutional for normal image
+                   .build();
+    }
+
 }

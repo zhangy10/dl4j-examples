@@ -21,7 +21,9 @@ public class HarEva {
 
     public static void main(String[] args) throws Exception {
 
+        boolean isPhone = false ;
         // read a model
+<<<<<<< HEAD
 //        File model = new File("/Users/zhangyu/Desktop/" + "model.bin");
 //        File model = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/" + "model.bin");
 //        File model = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/nor_shuffle_data/" + "model.bin");
@@ -35,7 +37,16 @@ public class HarEva {
 //        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/test.csv");
 //        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/nor_test.csv");
 //        File testFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Renew_data/nor_train.csv");
+=======
+        File model = null;
+        if (isPhone) {
+            model = new File("/Users/zhangyu/Desktop/" + "model_phone.bin");
+        } else {
+            model = new File("/Users/zhangyu/Desktop/" + "multi_model.bin");
+        }
+>>>>>>> 0a70559d76af01bab3285c647352c25245a596fb
 
+        MultiLayerNetwork network = ModelSerializer.restoreMultiLayerNetwork(model);
 
         DataType type = DataType.HAR;
         Config config = DataSet.getConfig(type);

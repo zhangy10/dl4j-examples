@@ -9,14 +9,49 @@ import java.util.List;
  */
 public class LinkedSplit {
 
+    private int taskNum;
+    private DataType dataType;
+    private String basePath;
+    private String logPath;
+    private String log = "";
+    private SplitListener donelistener;
+
+    public LinkedSplit(int taskNum, DataType dataType, String basePath, SplitListener donelistener) {
+        this.taskNum = taskNum;
+        this.dataType = dataType;
+        this.basePath = basePath;
+        this.donelistener = donelistener;
+    }
 
     public static void main(String[] args) {
-        int taskN = 15;
-        DataType type = DataType.HAR;
+        String file = "/Users/zhangyu/Desktop/";
+        LinkedSplit runner = new LinkedSplit(2, DataType.TEST, file, null);
+        runner.run();
+    }
+
+
+    private SplitListener listener = new SplitListener() {
+        @Override
+        public void trainDone(String output) {
+            // save output to files
+            FileUtils.write(log + output, logPath);
+            if (donelistener != null) {
+                donelistener.trainDone(null);
+            }
+        }
+    };
+
+
+    public void run() {
+        DataType type = dataType;
+        int taskN = taskNum;
+
+        String modelFile = basePath + taskNum + "_" + type + "_chain_model.bin";
+        logPath = basePath + taskNum + "_" + type + "_chain_log.txt";
 
         List<TrainSplit.Pair> list = TrainSplit.getTask(taskN, DataSet.getConfig(type).getTaskNum());
-
-        System.out.println(list.toString());
+        log = list.toString() + "\n";
+        System.out.println(log);
 
         List<TrainSplit> taskList = new ArrayList<>();
         TrainSplit root = null;
@@ -28,10 +63,10 @@ public class LinkedSplit {
             TrainSplit task = null;
             if (root == null) {
                 // master 1st
-                task = new TrainSplit(i, config.setTaskRange(fragment.start, fragment.end), taskN - 1, true);
+                task = new TrainSplit(i, config.setTaskRange(fragment.start, fragment.end), taskN - 1, true, listener, modelFile);
                 master = task;
             } else {
-                task = new TrainSplit(root.getQueue(), i, config.setTaskRange(fragment.start, fragment.end), true);
+                task = new TrainSplit(root.getQueue(), i, config.setTaskRange(fragment.start, fragment.end), true, listener, modelFile);
                 // last one will not wait for any nodes
                 if (i == taskN - 1) {
                     task.isEnd = true;
