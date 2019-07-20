@@ -5,5 +5,12 @@ public enum  DataType {
     OP,
     MHe,
     DF,
-    PAMA
+    PAMA,
+    AAL,
+    EMG,
+    EEG,
+    EE,
+    EES,
+    FALL,
+    SIS
 }

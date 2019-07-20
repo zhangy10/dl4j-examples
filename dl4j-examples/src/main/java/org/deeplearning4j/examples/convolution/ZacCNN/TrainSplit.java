@@ -373,7 +373,7 @@ public class TrainSplit extends Thread {
         // evaluate
         if (isMaster) {
             System.out.println("Save model....");
-            String basePath = "/Users/zhangyu/Desktop/";
+            String basePath = "/Users/zber/Desktop/";
             try {
                 ModelSerializer.writeModel(model, basePath + "multi_model.bin", true);
             } catch (IOException e) {
@@ -478,7 +478,7 @@ public class TrainSplit extends Thread {
     }
 
     public static void main(String[] args) {
-        DataType type = DataType.OP;
+        DataType type = DataType.HAR;
         int task = 1;
 
         // split task
