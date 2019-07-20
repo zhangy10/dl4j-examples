@@ -26,10 +26,12 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 import static java.lang.Math.toIntExact;
@@ -115,14 +117,21 @@ public class CF10 {
 
         // Training:
 //        MultiLayerConfiguration conf = lenet();
-//        MultiLayerConfiguration conf = alexnet();
-        MultiLayerConfiguration conf = alexnet2();
+        MultiLayerConfiguration conf = alexnet();
+//        MultiLayerConfiguration conf = alexnet2();
 
         MultiLayerNetwork net = new MultiLayerNetwork(conf);
         net.init();
         net.setListeners(listener);
 
         System.out.println("Total num of params: " + net.numParams());
+
+        // for test, save model
+//        try {
+//            Nd4j.saveBinary(net.params(), new File("/Users/zhangyu/Desktop/test/cache"));
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
 
         net.fit(trainIter, nEpochs);
 

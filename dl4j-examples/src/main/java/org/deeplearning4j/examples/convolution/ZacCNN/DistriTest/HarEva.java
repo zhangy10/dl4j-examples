@@ -21,7 +21,7 @@ public class HarEva {
 
     public static void main(String[] args) throws Exception {
 
-        boolean isPhone = true ;
+        boolean isPhone = false ;
         // read a model
         File model = null;
         if (isPhone) {
@@ -32,7 +32,7 @@ public class HarEva {
 
         MultiLayerNetwork network = ModelSerializer.restoreMultiLayerNetwork(model);
 
-        DataType type = DataType.TEST4;
+        DataType type = DataType.HAR;
         Config config = DataSet.getConfig(type);
 
         File testFile = new File(config.getTestPath());

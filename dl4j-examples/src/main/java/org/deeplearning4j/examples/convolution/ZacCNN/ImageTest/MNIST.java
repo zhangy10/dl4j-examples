@@ -31,6 +31,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
@@ -41,6 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 
@@ -133,6 +135,14 @@ public class MNIST {
         net.setListeners(listener);
 
         System.out.println("Total num of params: " + net.numParams());
+
+        // for test, save model
+//        try {
+//            Nd4j.saveBinary(net.params(), new File("/Users/zhangyu/Desktop/test/cache"));
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+
 
         net.fit(trainIter, nEpochs);
 

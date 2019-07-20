@@ -11,6 +11,8 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.distribution.NormalDistribution;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.*;
+import org.deeplearning4j.nn.conf.preprocessor.CnnToRnnPreProcessor;
+import org.deeplearning4j.nn.conf.preprocessor.RnnToCnnPreProcessor;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.api.TrainingListener;
@@ -21,6 +23,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
@@ -419,6 +422,14 @@ public class TrainSplit extends Thread {
 
             model = new MultiLayerNetwork(conf);
             model.init();
+
+            // for test, save model
+//            try {
+//                Nd4j.saveBinary(model.params(), new File("/Users/zhangyu/Desktop/test/cache"));
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+
             // send init to others
             message.parameters = model.params();
 
@@ -588,52 +599,62 @@ public class TrainSplit extends Thread {
         return new DenseLayer.Builder().name(name).nOut(out).biasInit(bias).dropOut(dropOut).dist(new NormalDistribution(0, 1)).build();
     }
 
+    private LSTM lstm(String name, int out, double bias, double dropOut) {
+        return new LSTM.Builder().name(name).nOut(out).biasInit(bias).dropOut(dropOut).dist(new NormalDistribution(0, 1))
+                   .activation(Activation.TANH).build();
+    }
+
 
     public MultiLayerConfiguration lenet(Config config) {
-        NeuralNetConfiguration.ListBuilder builder =  new NeuralNetConfiguration.Builder()
-                   .seed(config.getSeed())
+        InputType inputType = InputType.convolutional(config.getHeight(), config.getWidth(), config.getChannel());
+
+        NeuralNetConfiguration.ListBuilder builder = new NeuralNetConfiguration.Builder()
+                                                         .seed(config.getSeed())
 //                                           .weightInit(WeightInit.NORMAL) //根据给定的分布采样参数
-                   .weightInit(WeightInit.DISTRIBUTION)
-                   .dist(new NormalDistribution(0.0, 1.0)) //均值为0，方差为1.0的正态分布
-                   .activation(Activation.RELU)
-                   .updater(new Adam(config.getLearnRate()))
-                   // Adam is better
+                                                         .weightInit(WeightInit.DISTRIBUTION)
+                                                         .dist(new NormalDistribution(0.0, 1.0)) //均值为0，方差为1.0的正态分布
+                                                         .activation(Activation.RELU)
+                                                         .updater(new Adam(config.getLearnRate()))
+                                                         // Adam is better
 //                   .updater(new Nadam(learnRate))
-                   // increase by 1% over 0.001
+                                                         // increase by 1% over 0.001
 //                   .updater(new Adam(new InverseSchedule(ScheduleType.EPOCH, learnRate, gamma, 1)))
 //                .biasUpdater(new Nesterovs(new StepSchedule(ScheduleType.ITERATION, 2e-2, 0.1, 100000), 0.9))
 
-                   .gradientNormalization(GradientNormalization.RenormalizeL2PerLayer) // normalize to prevent vanishing or exploding gradients
-                   //采用除以梯度2范数来规范化梯度防止梯度消失或突变
-                   .l2(5 * 1e-4)
-                   .list() //13层的网络,第1,3层构建了alexnet计算层，目的是对当前输出的结果做平滑处理，参数有相邻核映射数n=5,规范化常亮k=2,指数常量beta=0.75，系数常量alpha=1e-4
-                   .layer(0, convNet("c1", config.getChannel(), config.getC1_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, 0))
-                   // update padding issue
+                                                         .gradientNormalization(GradientNormalization.RenormalizeL2PerLayer) // normalize to prevent vanishing or exploding gradients
+                                                         //采用除以梯度2范数来规范化梯度防止梯度消失或突变
+                                                         .l2(5 * 1e-4)
+                                                         .list() //13层的网络,第1,3层构建了alexnet计算层，目的是对当前输出的结果做平滑处理，参数有相邻核映射数n=5,规范化常亮k=2,指数常量beta=0.75，系数常量alpha=1e-4
+                                                         .layer(0, convNet("c1", config.getChannel(), config.getC1_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, 0))
+                                                         // update padding issue
 //                                           .layer(0, convNet("c1", channels, 36, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 32}, 0))
-                   .layer(1, maxpooling("m1", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
-                   .layer(2, convNet("c2", -1, config.getC2_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
+                                                         .layer(1, maxpooling("m1", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
+                                                         .layer(2, convNet("c2", -1, config.getC2_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
 //                                           .layer(2, convNet("c2", -1, 72, new int[]{1, 64}, new int[]{1, 1}, new int[]{0, 16}, nonZeroBias))
-                   .layer(3, maxpooling("m2", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
-                   .layer(4, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()));
+                                                         .layer(3, maxpooling("m2", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
+                                                         .setInputType(inputType);
 
         switch (SystemRun.layerConfig) {
             case ONE:
-                builder = builder.layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
-                                                .name("o1")
-                                                .nOut(config.getNumClasses())
-                                                .activation(Activation.SOFTMAX)
-                                                .build());
+                builder = builder.layer(4, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                            .name("o1")
+                                            .nOut(config.getNumClasses())
+                                            .activation(Activation.SOFTMAX)
+                                            .build());
                 break;
             case TWO:
-                builder = builder.layer(5, full("f2", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
-                    .layer(6, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
-                                  .name("o1")
-                                  .nOut(config.getNumClasses())
-                                  .activation(Activation.SOFTMAX)
-                                  .build());
+                builder = builder.layer(4, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(5, full("f2", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(6, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                            .name("o1")
+                                            .nOut(config.getNumClasses())
+                                            .activation(Activation.SOFTMAX)
+                                            .build());
                 break;
             case THREE:
-                builder = builder.layer(5, full("f2", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                builder = builder.layer(4, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(5, full("f2", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
                               .layer(6, full("f3", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
                               .layer(7, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
                                             .name("o1")
@@ -641,10 +662,23 @@ public class TrainSplit extends Thread {
                                             .activation(Activation.SOFTMAX)
                                             .build());
                 break;
-        }
+            case LSTM:
+                builder = builder.layer(4, lstm("l1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(5, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(6, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                            .name("o1")
+                                            .nOut(config.getNumClasses())
+                                            .activation(Activation.SOFTMAX)
+                                            .build());
+//                              .layer(5, new RnnOutputLayer.Builder(LossFunctions.LossFunction.MCXENT).activation(Activation.SOFTMAX)
+//                                            .name("ro1")
+//                                            .nOut(config.getNumClasses()).build());
 
+//                // for cnn to lstm + rnn
+//                return builder.inputPreProcessor(4, InputTypeUtil.getPreprocessorForInputTypeRnnLayers(inputType, null)).build();
+                break;
+        }
         return builder.backprop(true)
-                   .setInputType(InputType.convolutional(config.getHeight(), config.getWidth(), config.getChannel()))
                    .build();
     }
 

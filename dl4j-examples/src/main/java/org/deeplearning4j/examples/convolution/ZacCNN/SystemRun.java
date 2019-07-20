@@ -10,7 +10,7 @@ public class SystemRun {
 
 
     public static SyncPolicy policy = SyncPolicy.EPOC;
-    public static ModelLayer layerConfig = ModelLayer.THREE;
+    public static ModelLayer layerConfig = ModelLayer.ONE;
 
 
     public static void main(String[] args) {
@@ -58,6 +58,6 @@ public class SystemRun {
     }
 
     public enum ModelLayer {
-        ONE, TWO, THREE;
+        ONE, TWO, THREE, LSTM
     }
 }
