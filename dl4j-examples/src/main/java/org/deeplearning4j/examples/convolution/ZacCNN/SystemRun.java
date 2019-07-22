@@ -11,8 +11,8 @@ public class SystemRun {
 
     public static SyncPolicy policy = SyncPolicy.EPOC;
     public static ModelLayer layerConfig = ModelLayer.ONE;
-    public static boolean needLowScale = false;
-    public static boolean isAlex = false;
+    public static boolean needLowScale = true;
+    public static boolean isAlex = true;
 
 
     public static void main(String[] args) {

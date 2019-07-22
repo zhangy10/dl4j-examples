@@ -66,7 +66,7 @@ public class HarReader extends CSVRecordReader {
         long t = System.currentTimeMillis();
         List<Writable> line = super.next();
 
-        System.out.println("Read one line time: " + (System.currentTimeMillis() - t));
+//        System.out.println("Read one line time: " + (System.currentTimeMillis() - t));
         t = System.currentTimeMillis();
 
         // reshape one line to multi-channel data
@@ -77,7 +77,7 @@ public class HarReader extends CSVRecordReader {
         List<Writable> ret = RecordConverter.toRecord(rcf);
         ret.add(l);
 
-        System.out.println("Reshape one line and split feature + label time: " + (System.currentTimeMillis() - t));
+//        System.out.println("Reshape one line and split feature + label time: " + (System.currentTimeMillis() - t));
         return ret;
     }
 
@@ -102,12 +102,12 @@ public class HarReader extends CSVRecordReader {
          */
 
         long t = System.currentTimeMillis();
-        System.out.println("\n");
+//        System.out.println("\n");
 
         List<INDArray> ret = new ArrayList<>();
         List<List<Writable>> temp = load(num);
 
-        System.out.println("1. Read a batch time: " + (System.currentTimeMillis() - t));
+//        System.out.println("1. Read a batch time: " + (System.currentTimeMillis() - t));
         t = System.currentTimeMillis();
 
         int rows = temp.size();
@@ -126,7 +126,7 @@ public class HarReader extends CSVRecordReader {
         INDArray lineMat = RecordConverter.toMatrix(temp);
         temp.clear();
 
-        System.out.println("2. RecordConverter from List to NDArray: " + (System.currentTimeMillis() - t));
+//        System.out.println("2. RecordConverter from List to NDArray: " + (System.currentTimeMillis() - t));
         t = System.currentTimeMillis();
 
         long w = lineMat.shape()[1];
@@ -134,7 +134,7 @@ public class HarReader extends CSVRecordReader {
         INDArray f = lineMat.get(NDArrayIndex.all(), NDArrayIndex.interval(0, w - 1));
 
 
-        System.out.println("3. add to NDArray: " + (System.currentTimeMillis() - t));
+//        System.out.println("3. add to NDArray: " + (System.currentTimeMillis() - t));
         t = System.currentTimeMillis();
 
         long h = lineMat.shape()[0];
@@ -146,7 +146,7 @@ public class HarReader extends CSVRecordReader {
         }
 
 
-        System.out.println("4. Reshape: " + (System.currentTimeMillis() - t));
+//        System.out.println("4. Reshape: " + (System.currentTimeMillis() - t));
         t = System.currentTimeMillis();
 
         // convert label to binary matrix
@@ -160,7 +160,7 @@ public class HarReader extends CSVRecordReader {
         ret.add(features);
         ret.add(labels);
 
-        System.out.println("5. Label convert: " + (System.currentTimeMillis() - t));
+//        System.out.println("5. Label convert: " + (System.currentTimeMillis() - t));
 
         // if task number is done, then stop loop
         if (taskLeft <= 0) {
