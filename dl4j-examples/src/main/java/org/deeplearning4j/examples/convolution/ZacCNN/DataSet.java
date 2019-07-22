@@ -9,12 +9,16 @@ public class DataSet {
 
     private static final String basePath = "/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/";
 
+    private static final String lowBasePath = "/Users/zhangyu/Desktop/model_init_param_file/train_test/";
+
     static {
         // size: 160M done: good vs image
         dataMap.put(DataType.HAR, new Config.Builder()
 
-                                      .setDataPath(basePath + "nor_data/Har/nor_train.csv")
-                                      .setTestPath(basePath + "nor_data/Har/nor_test.csv")
+                                      .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_har_low.csv"
+                                                       : basePath + "nor_data/Har/nor_train.csv")
+                                      .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_har_low.csv"
+                                                       : basePath + "nor_data/Har/nor_test.csv")
                                       .setTaskNum(7352)
 
                                       .setChannel(9)
@@ -24,8 +28,10 @@ public class DataSet {
                                       .build());
         // size: 100M done: good
         dataMap.put(DataType.MHe, new Config.Builder()
-                                      .setDataPath(basePath + "nor_data/mHealth/nor_train.csv")
-                                      .setTestPath(basePath + "nor_data/mHealth/nor_test.csv")
+                                      .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_mhe_low.csv"
+                                                       : basePath + "nor_data/mHealth/nor_train.csv")
+                                      .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_mhe_low.csv"
+                                                       : basePath + "nor_data/mHealth/nor_test.csv")
                                       .setTaskNum(2339)
                                       .setChannel(23)
                                       .setWidth(100)
@@ -36,8 +42,10 @@ public class DataSet {
                                       .build());
         // size: 900M done: good
         dataMap.put(DataType.PAMA, new Config.Builder()
-                                       .setDataPath(basePath + "nor_data/Pama2/nor_train.csv")
-                                       .setTestPath(basePath + "nor_data/Pama2/nor_train.csv")
+                                       .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_pama_low.csv"
+                                                        : basePath + "nor_data/Pama2/nor_train.csv")
+                                       .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_pama_low.csv"
+                                                        : basePath + "nor_data/Pama2/nor_train.csv")
                                        .setTaskNum(11397)
                                        .setChannel(9)
                                        .setWidth(512)
@@ -63,8 +71,10 @@ public class DataSet {
 
         // size: 500M done: good
         dataMap.put(DataType.OP, new Config.Builder()
-                                     .setDataPath(basePath + "nor_data/Op/nor_train.csv")
-                                     .setTestPath(basePath + "nor_data/Op/nor_test.csv")
+                                     .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_op_low.csv"
+                                                      : basePath + "nor_data/Op/nor_train.csv")
+                                     .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_op_low.csv"
+                                                      : basePath + "nor_data/Op/nor_test.csv")
                                      .setTaskNum(14046)
 
                                      .setChannel(77)
@@ -78,8 +88,10 @@ public class DataSet {
 
         // size: 25m done: good
         dataMap.put(DataType.EMG, new Config.Builder()
-                                      .setDataPath(basePath + "nor_data/EMG/nor_train.csv")
-                                      .setTestPath(basePath + "nor_data/EMG/nor_test.csv")
+                                      .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_emg_low.csv"
+                                                       : basePath + "nor_data/EMG/nor_train.csv")
+                                      .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_emg_low.csv"
+                                                       : basePath + "nor_data/EMG/nor_test.csv")
                                       .setTaskNum(8563)
                                       .setChannel(8)
                                       .setWidth(20)
@@ -91,8 +103,10 @@ public class DataSet {
                                       .build());
         // size: 116m done
         dataMap.put(DataType.FALL, new Config.Builder()
-                                       .setDataPath(basePath + "nor_data/Fall/nor_train.csv")
-                                       .setTestPath(basePath + "nor_data/Fall/nor_test.csv")
+                                       .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_fall_low.csv"
+                                                        : basePath + "nor_data/Fall/nor_train.csv")
+                                       .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_fall_low.csv"
+                                                        : basePath + "nor_data/Fall/nor_test.csv")
                                        .setTaskNum(8448)
                                        .setChannel(1)
                                        .setWidth(604)

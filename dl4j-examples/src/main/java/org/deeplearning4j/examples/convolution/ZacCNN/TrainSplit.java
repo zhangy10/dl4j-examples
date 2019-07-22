@@ -68,6 +68,8 @@ public class TrainSplit extends Thread {
     private int batchNum = 0;
     private int lastSync = 0;
 
+    private List<Long> batchTime = new ArrayList<>();
+
 
     public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings, boolean isLinked, SplitListener splitListener, String modelFile) {
         this(sendQueue, id, settings, splitListener, modelFile);
@@ -124,6 +126,9 @@ public class TrainSplit extends Thread {
                 bstart = bend;
                 System.out.println("master iteration done: " + iteration + " model score: " + model.score() + " epoch: " + epoch +
                                        " learning rate: " + network.getLearningRate(0) + " time: " + time);
+
+                batchTime.add(time);
+
 //                System.out.println("Last Time: " + network.getLastEtlTime());
 //                try {
 //                    Thread.sleep(1000);
@@ -413,8 +418,12 @@ public class TrainSplit extends Thread {
              * switich model here----------------
              *
              */
-            MultiLayerConfiguration conf = lenet(settings);
-//            MultiLayerConfiguration conf = alexnet(settings);
+            MultiLayerConfiguration conf = null;
+            if (SystemRun.isAlex) {
+                conf = alexnet(settings);
+            } else {
+                conf = lenet(settings);
+            }
 
             // send conf to others
             Msg message = new Msg();
@@ -488,6 +497,16 @@ public class TrainSplit extends Thread {
             System.out.println(log4);
             output += log1 + "\n" + log2 + "\n" + log3 + "\n" + log4 + "\n";
 
+            // batch average time
+            int averageTime = 0;
+            for (int i = 0; i < batchTime.size(); i++) {
+                averageTime += batchTime.get(i);
+            }
+            averageTime /= (float) batchTime.size();
+            String log5 = "Average batch time: " + averageTime;
+            output += log5 + "\n";
+            System.out.println(log5);
+
             // each epoc average
             List<Double> averageList = new ArrayList<>();
             Iterator<Integer> it = epocLoss.keySet().iterator();
@@ -505,7 +524,6 @@ public class TrainSplit extends Thread {
             String array = averageList.toString();
             output += array + "\n";
             System.out.println(array);
-
 
             // evaluate ---------------
             File testFile = new File(settings.getTestPath());
@@ -691,7 +709,7 @@ public class TrainSplit extends Thread {
          * and the imagenetExample code referenced.
          * http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
          **/
-
+        int k = config.getKernal() / 2;
         return new NeuralNetConfiguration.Builder()
                    .seed(config.getSeed())
                    .weightInit(WeightInit.DISTRIBUTION) //根据给定的分布采样参数
@@ -711,9 +729,9 @@ public class TrainSplit extends Thread {
                    .layer(3, convNet("c2", -1, config.getC2_out(), new int[]{1, config.getKernal()}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
                    .layer(4, new LocalResponseNormalization.Builder().name("lrn2").build())
                    .layer(5, maxpooling("m2", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
-                   .layer(6, convNet("c3", -1, 90, new int[]{1, 32}, new int[]{1, 1}, new int[]{0, 0}, 0))
-                   .layer(7, convNet("c4", -1, 90, new int[]{1, 32}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
-                   .layer(8, convNet("c5", -1, 72, new int[]{1, 32}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
+                   .layer(6, convNet("c3", -1, 90, new int[]{1, k}, new int[]{1, 1}, new int[]{0, 0}, 0))
+                   .layer(7, convNet("c4", -1, 90, new int[]{1, k}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
+                   .layer(8, convNet("c5", -1, 72, new int[]{1, k}, new int[]{1, 1}, new int[]{0, 0}, config.getNonZeroBias()))
                    .layer(9, maxpooling("m3", new int[]{1, config.getPooling()}, new int[]{1, config.getPooling()}))
                    .layer(10, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
                    .layer(11, full("f2", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))

@@ -8,6 +8,7 @@ import org.datavec.image.loader.NativeImageLoader;
 import org.datavec.image.recordreader.ImageRecordReader;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
+import org.deeplearning4j.examples.convolution.ZacCNN.SystemRun;
 import org.deeplearning4j.nn.api.Model;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.GradientNormalization;
@@ -55,7 +56,7 @@ public class CF10 {
     static int outputNum = 6; // 10 digits classification
 
     static int batchSize = 16;
-    static int nEpochs = 20;
+    static int nEpochs = 60;
 //    static int iterations = 1;
 
     static int balanceTrainSize = 1200;
@@ -116,8 +117,12 @@ public class CF10 {
         System.out.println("Network configuration and training...");
 
         // Training:
-//        MultiLayerConfiguration conf = lenet();
-        MultiLayerConfiguration conf = alexnet();
+        MultiLayerConfiguration conf = null;
+        if (SystemRun.isAlex) {
+            conf = alexnet();
+        } else {
+            conf = lenet();
+        }
 //        MultiLayerConfiguration conf = alexnet2();
 
         MultiLayerNetwork net = new MultiLayerNetwork(conf);

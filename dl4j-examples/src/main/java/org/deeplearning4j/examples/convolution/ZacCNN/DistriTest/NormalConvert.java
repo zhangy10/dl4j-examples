@@ -23,18 +23,26 @@ import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.math.RoundingMode.HALF_UP;
+
 public class NormalConvert {
+
+    static boolean needScale = true;
+    static int scale = 8;
 
 
     public static void main(String[] args) throws Exception {
 
-        Config config = DataSet.getConfig(DataType.FALL);
+        Config config = DataSet.getConfig(DataType.PAMA);
 
 //        File ogFile = new File(config.getDataPath());
-        File ogFile = new File(config.getTestPath());
+//        File ogFile = new File(config.getTestPath());
+        File ogFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/og_shuffle/Pama/train.csv");
+//        File ogFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/og_shuffle/Pama/test.csv");
 
         HarReader reader = new HarReader(config.getNumLinesToSkip(), config.getHeight(), config.getWidth(), config.getChannel(),
             config.getNumClasses(), config.getTaskNum(), config.getDelimiter());
@@ -105,6 +113,9 @@ public class NormalConvert {
         List<Double> lineList = new ArrayList<>();
         for (int i = 0; i < line.columns(); i++) {
             Double item = line.data().getDouble(i);
+            if (needScale) {
+                item = BigDecimal.valueOf(item).setScale(scale, HALF_UP).doubleValue();
+            }
             lineList.add(item);
         }
         return lineList;

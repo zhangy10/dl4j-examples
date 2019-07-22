@@ -8,6 +8,7 @@ import org.datavec.image.loader.NativeImageLoader;
 import org.datavec.image.recordreader.ImageRecordReader;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
+import org.deeplearning4j.examples.convolution.ZacCNN.SystemRun;
 import org.deeplearning4j.examples.convolution.ZacCNN.TrainSplit;
 import org.deeplearning4j.examples.convolution.mnist.MnistClassifier;
 import org.deeplearning4j.examples.utilities.DataUtilities;
@@ -126,9 +127,13 @@ public class MNIST {
         System.out.println("Network configuration and training...");
 
         // Training:
-//        MultiLayerConfiguration conf = lenet();
-        MultiLayerConfiguration conf = alexnet();
 //        MultiLayerConfiguration conf = alexnet2();
+        MultiLayerConfiguration conf = null;
+        if (SystemRun.isAlex) {
+            conf = alexnet();
+        } else {
+            conf = lenet();
+        }
 
         MultiLayerNetwork net = new MultiLayerNetwork(conf);
         net.init();
