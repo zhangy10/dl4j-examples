@@ -21,7 +21,7 @@ public class HarEva {
 
     public static void main(String[] args) throws Exception {
 
-        boolean isPhone = false ;
+        boolean isPhone = true ;
         // read a model
         File model = null;
         if (isPhone) {

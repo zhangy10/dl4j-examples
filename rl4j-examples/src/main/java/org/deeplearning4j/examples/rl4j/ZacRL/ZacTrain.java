@@ -76,7 +76,7 @@ public class ZacTrain {
             10.0,  //td-error clipping
             0.1f,  //min epsilon
             10,  //num step for eps greedy anneal
-            false   //double DQN
+            true   //double DQN
         );
 
 // Configuration set
@@ -104,14 +104,14 @@ public class ZacTrain {
 
 
         //define the training
-        QLearningDiscreteDense<ZacStep> dql = new QLearningDiscreteDense(mdp, new ZacDQN(TOY_NET), TOY_QL, manager);
+        ZacQLearningImpl<ZacStep> dql = new ZacQLearningImpl(mdp, new ZacDQN(TOY_NET), TOY_QL, manager);
 
        // mdp.setModel(dql);
 
         //start the training
         dql.train();
 
-        DQNPolicy<ZacStep> pol = dql.getPolicy();
+        DQNPolicy<ZacStep> pol = (DQNPolicy) dql.getPolicy();
 
 
         pol.save("/Users/zber/Desktop/toy_pol2");
