@@ -1,5 +1,9 @@
 package org.deeplearning4j.examples.convolution.ZacCNN;
 
+import javax.xml.crypto.Data;
+import java.util.ArrayList;
+import java.util.List;
+
 public class SystemRun {
 
     static DataType type = DataType.FALL;
@@ -11,12 +15,31 @@ public class SystemRun {
 
     public static SyncPolicy policy = SyncPolicy.EPOC;
     public static ModelLayer layerConfig = ModelLayer.ONE;
-    public static boolean needLowScale = true;
+
+    public static boolean needLowScale = false;
     public static boolean isAlex = false;
     public static boolean isTestRound = true;
 
+    public static List<DataType> dataset = new ArrayList<>();
+    public static int dataIndex = 0;
+
+    static {
+//        dataset.add(DataType.EMG);
+//        dataset.add(DataType.FALL);
+//        dataset.add(DataType.HAR);
+//        dataset.add(DataType.MHe);
+//        dataset.add(DataType.OP);
+//        dataset.add(DataType.PAMA);
+
+        // for test
+        dataset.add(DataType.TEST);
+        dataset.add(DataType.TEST2);
+        dataset.add(DataType.TEST3);
+        dataset.add(DataType.TEST4);
+    }
 
     public static void main(String[] args) {
+        type = dataset.get(dataIndex);
         // start first task
         next(index);
     }
@@ -27,6 +50,16 @@ public class SystemRun {
             index++;
             if (index <= maxTask) {
                 next(index);
+            } else {
+                System.out.println("\n ================================================================== \n");
+                index = 1;
+                dataIndex++;
+                if (dataIndex < dataset.size()) {
+                    // will start to next dataset
+                    type = dataset.get(dataIndex);
+                    // start first task
+                    next(index);
+                }
             }
         }
     };
