@@ -22,14 +22,14 @@ import org.nd4j.linalg.util.ArrayUtil;
 
 import java.util.ArrayList;
 
-public class ZacQLearning <O extends Encodable> extends QLearning<O, Integer, DiscreteSpace> {
+public class ZacQLearning<O extends Encodable> extends QLearning<O, Integer, DiscreteSpace> {
 
     final private QLConfiguration configuration;
     final private DataManager dataManager;
     final private MDP<O, Integer, DiscreteSpace> mdp;
     final private IDQN currentDQN;
     private DQNPolicy<O> policy;
-    private EpsGreedy<O, Integer, DiscreteSpace> egPolicy;
+    private ZacGreedy<O, Integer, DiscreteSpace> egPolicy;
     private IDQN targetDQN;
     private int lastAction;
     private INDArray history[] = null;
@@ -38,7 +38,7 @@ public class ZacQLearning <O extends Encodable> extends QLearning<O, Integer, Di
 
 
     public ZacQLearning(MDP<O, Integer, DiscreteSpace> mdp, IDQN dqn, QLConfiguration conf,
-                             DataManager dataManager, int epsilonNbStep) {
+                        DataManager dataManager, int epsilonNbStep) {
         super(conf);
         this.configuration = conf;
         this.mdp = mdp;
@@ -116,6 +116,7 @@ public class ZacQLearning <O extends Encodable> extends QLearning<O, Integer, Di
 
     /**
      * Single step of training
+     *
      * @param obs last obs
      * @return relevant info for next step
      */
@@ -145,7 +146,7 @@ public class ZacQLearning <O extends Encodable> extends QLearning<O, Integer, Di
                     getHistoryProcessor().add(input);
                     history = getHistoryProcessor().getHistory();
                 } else
-                    history = new INDArray[] {input};
+                    history = new INDArray[]{input};
             }
             //concat the history into a single INDArray input
             INDArray hstack = Transition.concat(Transition.dup(history));
@@ -177,7 +178,7 @@ public class ZacQLearning <O extends Encodable> extends QLearning<O, Integer, Di
             if (isHistoryProcessor)
                 getHistoryProcessor().add(ninput);
 
-            INDArray[] nhistory = isHistoryProcessor ? getHistoryProcessor().getHistory() : new INDArray[] {ninput};
+            INDArray[] nhistory = isHistoryProcessor ? getHistoryProcessor().getHistory() : new INDArray[]{ninput};
 
             Transition<Integer> trans = new Transition(history, action, accuReward, stepReply.isDone(), nhistory[0]);
             getExpReplay().store(trans);
@@ -221,7 +222,7 @@ public class ZacQLearning <O extends Encodable> extends QLearning<O, Integer, Di
                 obs.putRow(i, obsArray[0]);
             } else {
                 for (int j = 0; j < obsArray.length; j++) {
-                    obs.put(new INDArrayIndex[] {NDArrayIndex.point(i), NDArrayIndex.point(j)}, obsArray[j]);
+                    obs.put(new INDArrayIndex[]{NDArrayIndex.point(i), NDArrayIndex.point(j)}, obsArray[j]);
                 }
             }
 
@@ -230,7 +231,7 @@ public class ZacQLearning <O extends Encodable> extends QLearning<O, Integer, Di
                 nextObs.putRow(i, nextObsArray[0]);
             } else {
                 for (int j = 0; j < nextObsArray.length; j++) {
-                    nextObs.put(new INDArrayIndex[] {NDArrayIndex.point(i), NDArrayIndex.point(j)}, nextObsArray[j]);
+                    nextObs.put(new INDArrayIndex[]{NDArrayIndex.point(i), NDArrayIndex.point(j)}, nextObsArray[j]);
                 }
             }
         }
@@ -266,7 +267,6 @@ public class ZacQLearning <O extends Encodable> extends QLearning<O, Integer, Di
                 yTar += getConfiguration().getGamma() * q;
 
             }
-
 
 
             double previousV = dqnOutputAr.getDouble(i, actions[i]);

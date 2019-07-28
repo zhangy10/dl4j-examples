@@ -1,4 +1,4 @@
-package org.deeplearning4j.examples.rl4j.RL;
+package org.deeplearning4j.examples.rl4j.ZacRL;
 
 import org.deeplearning4j.gym.StepReply;
 import org.deeplearning4j.rl4j.learning.NeuralNetFetchable;
@@ -21,7 +21,7 @@ import java.util.*;
  * <p>
  * DiscreteSpace: action
  */
-public class ZacMDP implements MDP<ZacStep, Integer, DiscreteSpace> {
+public class ZacMDP_1 implements MDP<ZacStep, Integer, DiscreteSpace> {
 
     // for random initalize each step's values
     final private static int SEED = 1234;
@@ -41,6 +41,7 @@ public class ZacMDP implements MDP<ZacStep, Integer, DiscreteSpace> {
      * if step of each round is the last, then finish...
      */
     final private static int MAX_STEP = 5;
+
     final private static int ACTION_SIZE = 5; // number of nodes
     final private static int numSleep = 1;
 
@@ -81,7 +82,7 @@ public class ZacMDP implements MDP<ZacStep, Integer, DiscreteSpace> {
         rewardMap.put(State.FREE, 1.0);
         rewardMap.put(State.SLEEP, -0.5);
 //        rewardMap.put(1.0,0.0);
-        rewardMap.put(State.DONE, -0.25);
+        rewardMap.put(State.DONE, -0.75);
     }
 
 
@@ -234,12 +235,13 @@ public class ZacMDP implements MDP<ZacStep, Integer, DiscreteSpace> {
     public ZacStep reset() {
         rewardMap.put(State.SLEEP, -0.5);
         action = -1.0;
-        if (round == MAX_STEP - 1) {
-            round = 0;
-            return zacStep = getStep(round);
-        }
-        zacStep = getStep(round);
-        round++;
+//        if (round == MAX_STEP - 1) {
+//            round = 0;
+//            return zacStep = getAction(round);
+//        }
+//        zacStep = getAction(round);
+//        round++;
+        zacStep = getStep(0);
         return zacStep;
 
     }
@@ -254,18 +256,24 @@ public class ZacMDP implements MDP<ZacStep, Integer, DiscreteSpace> {
     public StepReply<ZacStep> step(Integer a) {
         action = zacStep.getValues()[a];
         double reward = 0;
-         // select max value to action
+        // select max value to action
 
-        if(isDone()) { reward += 1;}
-        else {
+        if (isDone()) {
+            reward += 1;
+        } else if (action == valueMap.get(State.DONE)) {
+            reward += rewardMap.get(State.DONE);
+        } else if (action == valueMap.get(State.SLEEP)) {
+            reward += rewardMap.get(State.SLEEP);
+
+        } else {
             reward -= 0.04;
         }
 
-        if(action == valueMap.get(State.DONE)) reward += rewardMap.get(State.DONE);
-
-
-        if(action == valueMap.get(State.SLEEP)) reward += rewardMap.get(State.SLEEP);
-
+//        if(action == valueMap.get(State.DONE)) reward += rewardMap.get(State.DONE);
+//
+//
+//        if(action == valueMap.get(State.SLEEP)) reward += rewardMap.get(State.SLEEP);
+//
 
         if (rewardMap.get(State.SLEEP) < 0) {
 
@@ -298,7 +306,8 @@ public class ZacMDP implements MDP<ZacStep, Integer, DiscreteSpace> {
 //            reward++;
 //        }
         System.out.println("[doing step]: " + zacStep.toString());
-        zacStep.setValues(a, valueMap.get(State.DONE));
+        // next
+//        zacStep.setValues(a, valueMap.get(State.DONE));
 
         zacReply = new StepReply(zacStep, reward, isDone(), new JSONObject("{}"));
 
@@ -306,8 +315,8 @@ public class ZacMDP implements MDP<ZacStep, Integer, DiscreteSpace> {
     }
 
     @Override
-    public ZacMDP newInstance() {
-        return new ZacMDP();
+    public ZacMDP_1 newInstance() {
+        return new ZacMDP_1();
     }
 
     public enum State {

@@ -70,6 +70,14 @@ public class TrainSplit extends Thread {
 
     private List<Long> batchTime = new ArrayList<>();
 
+    // for test
+    private DataSetIterator testIterator = null;
+    private List<String> resultList = new ArrayList<>();
+    private List<Double> ac = new ArrayList<>();
+    private List<Double> pr = new ArrayList<>();
+    private List<Double> re = new ArrayList<>();
+    private List<Double> f1 = new ArrayList<>();
+
 
     public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings, boolean isLinked, SplitListener splitListener, String modelFile) {
         this(sendQueue, id, settings, splitListener, modelFile);
@@ -316,9 +324,14 @@ public class TrainSplit extends Thread {
                 model.setParams(newP);
 //                w0 = model.params().dup();
 
+                // update done, and test for accuracy
+                if (SystemRun.isTestRound) {
+                    test((MultiLayerNetwork) model);
+                }
+
                 // if last round, will not send the update to slaves
 
-                // TODO bug: if not send message back to slave, the memory will not be relesaed
+                // fixed bug: if not send message back to slave, the memory will not be relesaed
 //                if (epoc != settings.getEpoch() - 1) {
                 Msg newMsg = new Msg();
                 newMsg.parameters = newP;
@@ -392,6 +405,7 @@ public class TrainSplit extends Thread {
 
         long start = System.currentTimeMillis();
 
+        // train ------------------
         HarReader reader = new HarReader(settings.getNumLinesToSkip(), settings.getHeight(),
             settings.getWidth(), settings.getChannel(), settings.getNumClasses(), settings.getTaskNum(), settings.getDelimiter());
         try {
@@ -409,6 +423,27 @@ public class TrainSplit extends Thread {
             iterator.setPreProcessor(normalizer);
         }
 
+        // evaluate ---------------
+        // master test number will be current task number * (slave number + 1)
+        HarReader testReader = new HarReader(settings.getNumLinesToSkip(), settings.getHeight(), settings.getWidth(), settings.getChannel(),
+            settings.getNumClasses(), settings.getTaskNum() * (slaveNum + 1), settings.getDelimiter());
+
+        try {
+            testReader.initialize(new FileSplit(new File(settings.getTestPath())));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        testIterator = new RecordReaderDataSetIterator(testReader, settings.getBatchSize(),
+            settings.getLabelIndex(), settings.getNumClasses());
+
+        if (settings.isNoraml()) {
+            DataNormalization normalizer = new NormalizerStandardize();
+            normalizer.fit(testIterator);
+            testIterator.setPreProcessor(normalizer);
+        }
+
+        // model ready
         long process = System.currentTimeMillis();
 
         MultiLayerNetwork model = null;
@@ -473,6 +508,7 @@ public class TrainSplit extends Thread {
 
         long end = System.currentTimeMillis();
 
+        // train done
         if (isMaster) {
 
             // result.....
@@ -522,35 +558,61 @@ public class TrainSplit extends Thread {
             }
 
             String array = averageList.toString();
-            output += array + "\n";
+            output += "\nloss = " + array + "\n";
             System.out.println(array);
 
-            // evaluate ---------------
-            File testFile = new File(settings.getTestPath());
+//            // evaluate ---------------
+//            File testFile = new File(settings.getTestPath());
+//
+//            // master test number will be current task number * (slave number + 1)
+//            HarReader testReader = new HarReader(settings.getNumLinesToSkip(), settings.getHeight(), settings.getWidth(), settings.getChannel(),
+//                settings.getNumClasses(), settings.getTaskNum() * (slaveNum + 1), settings.getDelimiter());
+//
+//            try {
+//                testReader.initialize(new FileSplit(testFile));
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//
+//            DataSetIterator testIterator = new RecordReaderDataSetIterator(testReader, settings.getBatchSize(),
+//                settings.getLabelIndex(), settings.getNumClasses());
+//
+//            if (settings.isNoraml()) {
+//                DataNormalization normalizer = new NormalizerStandardize();
+//                normalizer.fit(testIterator);
+//                testIterator.setPreProcessor(normalizer);
+//            }
 
-            // master test number will be current task number * (slave number + 1)
-            HarReader testReader = new HarReader(settings.getNumLinesToSkip(), settings.getHeight(), settings.getWidth(), settings.getChannel(),
-                settings.getNumClasses(), settings.getTaskNum() * (slaveNum + 1), settings.getDelimiter());
+//            Evaluation eval = model.evaluate(testIterator);
+//            String result = eval.stats();
+//            output += result + "\n";
+//            System.out.println(result);
 
-            try {
-                testReader.initialize(new FileSplit(testFile));
-            } catch (Exception e) {
-                e.printStackTrace();
+            // test if train all done
+            if (!SystemRun.isTestRound) {
+                test(model);
             }
 
-            DataSetIterator testIterator = new RecordReaderDataSetIterator(testReader, settings.getBatchSize(),
-                settings.getLabelIndex(), settings.getNumClasses());
+            String m1 = "\nac = " + ac + "\n";
+            output += m1;
+            System.out.println(m1);
 
-            if (settings.isNoraml()) {
-                DataNormalization normalizer = new NormalizerStandardize();
-                normalizer.fit(testIterator);
-                testIterator.setPreProcessor(normalizer);
+            String m2 = "\npr = " + pr + "\n";
+            output += m2;
+            System.out.println(m2);
+
+            String m3 = "\nre = " + re + "\n";
+            output += m3;
+            System.out.println(m3);
+
+            String m4 = "\nf1 = " + f1 + "\n";
+            output += m4;
+            System.out.println(m4);
+
+            // all test results
+            for (String out : resultList) {
+                output += out;
             }
-
-            Evaluation eval = model.evaluate(testIterator);
-            String result = eval.stats();
-            output += result + "\n";
-            System.out.println(result);
 
             if (splitListener != null) {
                 splitListener.trainDone(output);
@@ -558,6 +620,20 @@ public class TrainSplit extends Thread {
         }
         // release memory
         model.clear();
+    }
+
+
+    public void test(MultiLayerNetwork model) {
+        Evaluation eval = model.evaluate(testIterator);
+        String result = "\nEpoc ID: " + epoc + "\n";
+        result += eval.stats() + "\n\n";
+        resultList.add(result);
+
+        ac.add(eval.accuracy());
+        pr.add(eval.precision());
+        re.add(eval.recall());
+        f1.add(eval.f1());
+        System.out.println(result);
     }
 
     public class Msg {
@@ -584,7 +660,6 @@ public class TrainSplit extends Thread {
             return "[" + start + "/" + end + "]";
         }
     }
-
 
 
     public static List<Pair> getTask(int taskNum, int total) {

@@ -1,6 +1,6 @@
 package org.deeplearning4j.examples.rl4j.RL;
 
-import org.deeplearning4j.examples.rl4j.ZacRL.ZacDQN;
+import org.deeplearning4j.examples.rl4j.ZacRL.ZacDQNFactory;
 import org.deeplearning4j.nn.api.Model;
 import org.deeplearning4j.optimize.api.TrainingListener;
 import org.deeplearning4j.rl4j.learning.sync.qlearning.QLearning;
@@ -105,7 +105,7 @@ public class ZacTrain {
 
 
         //define the training
-        QLearningDiscreteDense<ZacStep> dql = new QLearningDiscreteDense(mdp, new ZacDQN(TOY_NET), TOY_QL, manager);
+        QLearningDiscreteDense<ZacStep> dql = new QLearningDiscreteDense(mdp, new ZacDQNFactory(TOY_NET), TOY_QL, manager);
 
        // mdp.setModel(dql);
 

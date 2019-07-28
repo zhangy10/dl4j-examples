@@ -50,7 +50,7 @@ public class ZacStep implements Encodable{
 //        int PRIME = true;
 //        int result = 1;
 //        int result = result * 59 + Arrays.hashCode(this.getValues());
-//        result = result * 59 + this.getStep();
+//        result = result * 59 + this.getAction();
 //        return result;
 //    }
 
