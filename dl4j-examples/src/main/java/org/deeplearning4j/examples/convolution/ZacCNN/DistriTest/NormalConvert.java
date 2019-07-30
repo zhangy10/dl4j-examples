@@ -37,11 +37,11 @@ public class NormalConvert {
 
     public static void main(String[] args) throws Exception {
 
-        Config config = DataSet.getConfig(DataType.PAMA);
+        Config config = DataSet.getConfig(DataType.MHe);
 
 //        File ogFile = new File(config.getDataPath());
 //        File ogFile = new File(config.getTestPath());
-        File ogFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/og_shuffle/Pama/train.csv");
+        File ogFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/final_data/mHealth/nor_train.csv");
 //        File ogFile = new File("/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/og_shuffle/Pama/test.csv");
 
         HarReader reader = new HarReader(config.getNumLinesToSkip(), config.getHeight(), config.getWidth(), config.getChannel(),

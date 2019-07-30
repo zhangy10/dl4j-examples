@@ -27,19 +27,19 @@ public class DataSet {
                                       .setBatch(16)
                                       .build());
         // size: 100M done: good
-        dataMap.put(DataType.MHe, new Config.Builder()
-                                      .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_mhe_low.csv"
-                                                       : basePath + "nor_data/mHealth/nor_train.csv")
-                                      .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_mhe_low.csv"
-                                                       : basePath + "nor_data/mHealth/nor_test.csv")
-                                      .setTaskNum(2339)
-                                      .setChannel(23)
-                                      .setWidth(100)
-                                      .setNumClass(12)
-                                      .setKernel(50)
-//                                      .isNormal(true)
-                                      .setBatch(16)
-                                      .build());
+//        dataMap.put(DataType.MHe, new Config.Builder()
+//                                      .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_mhe_low.csv"
+//                                                       : basePath + "nor_data/mHealth/nor_train.csv")
+//                                      .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_mhe_low.csv"
+//                                                       : basePath + "nor_data/mHealth/nor_test.csv")
+//                                      .setTaskNum(2339)
+//                                      .setChannel(23)
+//                                      .setWidth(100)
+//                                      .setNumClass(12)
+//                                      .setKernel(50)
+////                                      .isNormal(true)
+//                                      .setBatch(16)
+//                                      .build());
         // size: 900M done: good
         dataMap.put(DataType.PAMA, new Config.Builder()
                                        .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_pama_low.csv"
@@ -70,47 +70,107 @@ public class DataSet {
 //                                       .build());
 
         // size: 500M done: good
+//        dataMap.put(DataType.OP, new Config.Builder()
+//                                     .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_op_low.csv"
+//                                                      : basePath + "nor_data/Op/nor_train.csv")
+//                                     .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_op_low.csv"
+//                                                      : basePath + "nor_data/Op/nor_test.csv")
+//                                     .setTaskNum(14046)
+//
+//                                     .setChannel(77)
+//                                     .setWidth(25)
+//                                     .setNumClass(11)
+//                                     .setBatch(16)
+//
+////                                     .isNormal(true)
+//                                     .setKernel(10)
+//                                     .build());
+//
+//        // size: 25m done: good
+//        dataMap.put(DataType.EMG, new Config.Builder()
+//                                      .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_emg_low.csv"
+//                                                       : basePath + "nor_data/EMG/nor_train.csv")
+//                                      .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_emg_low.csv"
+//                                                       : basePath + "nor_data/EMG/nor_test.csv")
+//                                      .setTaskNum(8563)
+//                                      .setChannel(8)
+//                                      .setWidth(20)
+//                                      .setNumClass(6)
+//                                      .setBatch(16)
+//                                      .setKernel(8)
+////                                      .isNormal(true)
+//                                      .setEpoch(20)
+//                                      .build());
+//        // size: 116m done
+//        dataMap.put(DataType.FALL, new Config.Builder()
+//                                       .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_fall_low.csv"
+//                                                        : basePath + "nor_data/Fall/nor_train.csv")
+//                                       .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_fall_low.csv"
+//                                                        : basePath + "nor_data/Fall/nor_test.csv")
+//                                       .setTaskNum(8448)
+//                                       .setChannel(1)
+//                                       .setWidth(604)
+//                                       .setNumClass(11)
+//                                       .setBatch(16)
+//                                       .setKernel(42)
+////                                       .isNormal(true)
+//                                       .setEpoch(20)
+//                                       .build());
+
+
+        dataMap.put(DataType.MHe, new Config.Builder()   // kernel 50, width 100  91%   // kernel 30 width 100 96% // 11 class 35 kernel 92%
+                                      .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_mhe_low.csv"
+                                                       : basePath + "nor_data/mHealth/nor_train.csv")
+                                      .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_mhe_low.csv"
+                                                       : basePath + "nor_data/mHealth/nor_test.csv")
+                                      .setTaskNum(2485)
+                                      .setChannel(23)
+                                      .setWidth(100)
+                                      .setNumClass(11)
+                                      .setKernel(35)
+//                                      .isNormal(true)
+                                      .setBatch(16)
+                                      .build());
+
+
         dataMap.put(DataType.OP, new Config.Builder()
                                      .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_op_low.csv"
                                                       : basePath + "nor_data/Op/nor_train.csv")
                                      .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_op_low.csv"
                                                       : basePath + "nor_data/Op/nor_test.csv")
-                                     .setTaskNum(14046)
+                                     .setTaskNum(15735) // 23 15737
 
                                      .setChannel(77)
-                                     .setWidth(25)
+                                     .setWidth(23) // 25 - 10 %，23 - 10  89%, 21 -10  0.8964,
                                      .setNumClass(11)
                                      .setBatch(16)
 
 //                                     .isNormal(true)
                                      .setKernel(10)
                                      .build());
-
-        // size: 25m done: good
         dataMap.put(DataType.EMG, new Config.Builder()
                                       .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_emg_low.csv"
                                                        : basePath + "nor_data/EMG/nor_train.csv")
                                       .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_emg_low.csv"
                                                        : basePath + "nor_data/EMG/nor_test.csv")
-                                      .setTaskNum(8563)
+                                      .setTaskNum(12295)
                                       .setChannel(8)
                                       .setWidth(20)
                                       .setNumClass(6)
                                       .setBatch(16)
-                                      .setKernel(8)
+                                      .setKernel(9)
 //                                      .isNormal(true)
                                       .setEpoch(20)
                                       .build());
-        // size: 116m done
         dataMap.put(DataType.FALL, new Config.Builder()
                                        .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_fall_low.csv"
                                                         : basePath + "nor_data/Fall/nor_train.csv")
                                        .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_fall_low.csv"
                                                         : basePath + "nor_data/Fall/nor_test.csv")
-                                       .setTaskNum(8448)
+                                       .setTaskNum(7618)
                                        .setChannel(1)
                                        .setWidth(604)
-                                       .setNumClass(11)
+                                       .setNumClass(8)
                                        .setBatch(16)
                                        .setKernel(42)
 //                                       .isNormal(true)

@@ -21,7 +21,7 @@ public class MasterSplit {
 
     public static void main(String[] args) {
         String file = "/Users/zhangyu/Desktop/";
-        MasterSplit runner = new MasterSplit(1, DataType.EMG, file, null);
+        MasterSplit runner = new MasterSplit(2, DataType.EMG, file, null);
         runner.run();
     }
 

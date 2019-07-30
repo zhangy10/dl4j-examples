@@ -423,31 +423,32 @@ public class TrainSplit extends Thread {
             iterator.setPreProcessor(normalizer);
         }
 
-        // evaluate ---------------
-        // master test number will be current task number * (slave number + 1)
-        HarReader testReader = new HarReader(settings.getNumLinesToSkip(), settings.getHeight(), settings.getWidth(), settings.getChannel(),
-            settings.getNumClasses(), settings.getTaskNum() * (slaveNum + 1), settings.getDelimiter());
-
-        try {
-            testReader.initialize(new FileSplit(new File(settings.getTestPath())));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        testIterator = new RecordReaderDataSetIterator(testReader, settings.getBatchSize(),
-            settings.getLabelIndex(), settings.getNumClasses());
-
-        if (settings.isNoraml()) {
-            DataNormalization normalizer = new NormalizerStandardize();
-            normalizer.fit(testIterator);
-            testIterator.setPreProcessor(normalizer);
-        }
-
         // model ready
         long process = System.currentTimeMillis();
 
         MultiLayerNetwork model = null;
         if (isMaster) {
+
+            // evaluate ---------------
+            // master test number will be current task number * (slave number + 1)
+            HarReader testReader = new HarReader(settings.getNumLinesToSkip(), settings.getHeight(), settings.getWidth(), settings.getChannel(),
+                settings.getNumClasses(), settings.getTaskNum() * (slaveNum + 1), settings.getDelimiter());
+
+            try {
+                testReader.initialize(new FileSplit(new File(settings.getTestPath())));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            testIterator = new RecordReaderDataSetIterator(testReader, settings.getBatchSize(),
+                settings.getLabelIndex(), settings.getNumClasses());
+
+            if (settings.isNoraml()) {
+                DataNormalization normalizer = new NormalizerStandardize();
+                normalizer.fit(testIterator);
+                testIterator.setPreProcessor(normalizer);
+            }
+
 
             /**
              * switich model here----------------

@@ -8,7 +8,7 @@ public class SystemRun {
 
     static DataType type = DataType.FALL;
     static boolean isMaster = true;
-    static int maxTask = 3;
+    static int maxTask = 2;
     static String basePath = "/Users/zhangyu/Desktop/";
     static int index = 1;
 
