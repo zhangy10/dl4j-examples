@@ -1,8 +1,9 @@
-package org.deeplearning4j.examples.convolution.ZacCNN;
+package org.deeplearning4j.examples.convolution.ZacCNN.DistriTest;
 
 import org.datavec.api.split.FileSplit;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
+import org.deeplearning4j.examples.convolution.ZacCNN.*;
 import org.deeplearning4j.nn.api.Model;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.GradientNormalization;
@@ -11,19 +12,15 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.distribution.NormalDistribution;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.*;
-import org.deeplearning4j.nn.conf.preprocessor.CnnToRnnPreProcessor;
-import org.deeplearning4j.nn.conf.preprocessor.RnnToCnnPreProcessor;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.api.TrainingListener;
 import org.deeplearning4j.util.ModelSerializer;
-import org.nd4j.evaluation.classification.ROCMultiClass;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
-import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
@@ -33,7 +30,7 @@ import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class TrainSplit extends Thread {
+public class LinkTrain extends Thread {
 
     private int id;
 
@@ -79,12 +76,12 @@ public class TrainSplit extends Thread {
     private List<Double> f1 = new ArrayList<>();
 
 
-    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings, boolean isLinked, SplitListener splitListener, String modelFile) {
+    public LinkTrain(BlockingQueue<Msg> sendQueue, int id, Config settings, boolean isLinked, SplitListener splitListener, String modelFile) {
         this(sendQueue, id, settings, splitListener, modelFile);
         this.isLinked = isLinked;
     }
 
-    public TrainSplit(BlockingQueue<Msg> sendQueue, int id, Config settings, SplitListener splitListener, String modelFile) {
+    public LinkTrain(BlockingQueue<Msg> sendQueue, int id, Config settings, SplitListener splitListener, String modelFile) {
         this.sendQueue = sendQueue;
         this.id = id;
         this.settings = settings;
@@ -97,12 +94,12 @@ public class TrainSplit extends Thread {
         this.lastSync = (batchNum / syncInterval) * syncInterval;
     }
 
-    public TrainSplit(int id, Config settings, int slaveNum, boolean isLinked, SplitListener splitListener, String modelFile) {
+    public LinkTrain(int id, Config settings, int slaveNum, boolean isLinked, SplitListener splitListener, String modelFile) {
         this(id, settings, slaveNum, splitListener, modelFile);
         this.isLinked = isLinked;
     }
 
-    public TrainSplit(int id, Config settings, int slaveNum, SplitListener splitListener, String modelFile) {
+    public LinkTrain(int id, Config settings, int slaveNum, SplitListener splitListener, String modelFile) {
         this(null, id, settings, splitListener, modelFile);
         this.isMaster = true;
         this.slaveNum = slaveNum;
@@ -262,11 +259,16 @@ public class TrainSplit extends Thread {
                 if (isLinked && slaveNum > 0) {
                     Msg newMsg = msgList.get(0);
 
-                    newMsg.num++;
-                    newMsg.parameters.muli(newMsg.num - 1);
+//                    newMsg.num++;
+//                    newMsg.parameters.muli(newMsg.num - 1);
+//                    newP.addi(newMsg.parameters);
+//                    newP.divi(newMsg.num);
+//                    System.out.println("Master is divided by: [" + newMsg.num + "]");
+
+
                     newP.addi(newMsg.parameters);
-                    newP.divi(newMsg.num);
-                    System.out.println("Master is divided by: [" + newMsg.num + "]");
+                    newP.divi(2);
+
                 } else {
                     // 1.  average SGD
                     for (Msg m : msgList) {
@@ -358,12 +360,17 @@ public class TrainSplit extends Thread {
                         Msg newMsg = getQueue.take();
                         msg.parameters = model.params().dup();
 
-                        // add with sub node weights
-                        newMsg.num++;
-                        newMsg.parameters.muli(newMsg.num - 1);
+                        // chainSGD
+//                        // add with sub node weights
+//                        newMsg.num++;
+//                        newMsg.parameters.muli(newMsg.num - 1);
+//                        msg.parameters.addi(newMsg.parameters);
+//                        msg.parameters.divi(newMsg.num);
+//                        msg.num = newMsg.num;
+
+                        // average SGD
                         msg.parameters.addi(newMsg.parameters);
-                        msg.parameters.divi(newMsg.num);
-                        msg.num = newMsg.num;
+                        msg.parameters.divi(2);
 
                         System.out.println("divide by: [" + msg.num + "] thread: " + id);
                     } catch (InterruptedException e) {
@@ -462,18 +469,18 @@ public class TrainSplit extends Thread {
             }
 
             // send conf to others
-            Msg message = new Msg();
+           Msg message = new Msg();
             message.confJosn = conf.toJson();
 
             model = new MultiLayerNetwork(conf);
             model.init();
 
             // for test, save model
-            try {
-                Nd4j.saveBinary(model.params(), new File("/Users/zhangyu/Desktop/cache"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+//            try {
+//                Nd4j.saveBinary(model.params(), new File("/Users/zhangyu/Desktop/test/cache"));
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
 
             // send init to others
             message.parameters = model.params();
@@ -642,18 +649,18 @@ public class TrainSplit extends Thread {
     }
 
     public class Msg {
-        public int id;
-        public INDArray parameters;
-        public String confJosn;
-        public int num = 0;
+        int id;
+        INDArray parameters;
+        String confJosn;
+        int num = 0;
 
         //        double loss;
-        public double w;
+        double w;
     }
 
     public static class Pair {
-        int start;
-        int end;
+        public int start;
+        public int end;
 
         public Pair(int start, int end) {
             this.start = start;
@@ -763,20 +770,14 @@ public class TrainSplit extends Thread {
                                             .activation(Activation.SOFTMAX)
                                             .build());
                 break;
-//            case LSTM:
-//                builder = builder.layer(4, lstm("l1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
-//                              .layer(5, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
-//                              .layer(6, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
-//                                            .name("o1")
-//                                            .nOut(config.getNumClasses())
-//                                            .activation(Activation.SOFTMAX)
-//                                            .build());
             case LSTM:
                 builder = builder.layer(4, lstm("l1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
-//                              .layer(5, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
-                              .layer(5, new RnnOutputLayer.Builder().activation(Activation.SOFTMAX)
-                                            .lossFunction(LossFunctions.LossFunction.MCXENT).nOut(config.getNumClasses()).name("o1").build());
-
+                              .layer(5, full("f1", config.getF1_out(), config.getNonZeroBias(), config.getDropOut()))
+                              .layer(6, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                                            .name("o1")
+                                            .nOut(config.getNumClasses())
+                                            .activation(Activation.SOFTMAX)
+                                            .build());
 //                              .layer(5, new RnnOutputLayer.Builder(LossFunctions.LossFunction.MCXENT).activation(Activation.SOFTMAX)
 //                                            .name("ro1")
 //                                            .nOut(config.getNumClasses()).build());

@@ -7,18 +7,21 @@ public class DataSet {
 
     private static Map<DataType, Config> dataMap = new HashMap<>();
 
-    private static final String basePath = "/Users/zhangyu/Desktop/mDeepBoost/Important/Data/Final_Data/";
+    private static final String basePath = "/Users/zhangyu/GoogleDrive/PHD/All_Papers/MDLdroid/Submission/Final_Data/";
 
-    private static final String lowBasePath = "/Users/zhangyu/Desktop/model_init_param_file/train_test/";
+//    private static final String folder = "nor_data";
+    private static final String folder = "final_data";
+
+    private static final String lowBasePath = "/Users/zhangyu/GoogleDrive/PHD/All_Papers/MDLdroid/Submission/Final_Data/model_init_param_file/train_test/";
 
     static {
         // size: 160M done: good vs image
         dataMap.put(DataType.HAR, new Config.Builder()
 
                                       .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_har_low.csv"
-                                                       : basePath + "nor_data/Har/nor_train.csv")
+                                                       : basePath + folder + "/Har/nor_train.csv")
                                       .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_har_low.csv"
-                                                       : basePath + "nor_data/Har/nor_test.csv")
+                                                       : basePath + folder + "/Har/nor_test.csv")
                                       .setTaskNum(7352)
 
                                       .setChannel(9)
@@ -43,9 +46,9 @@ public class DataSet {
         // size: 900M done: good
         dataMap.put(DataType.PAMA, new Config.Builder()
                                        .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_pama_low.csv"
-                                                        : basePath + "nor_data/Pama2/nor_train.csv")
+                                                        : basePath + folder + "/Pama2/nor_train.csv")
                                        .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_pama_low.csv"
-                                                        : basePath + "nor_data/Pama2/nor_train.csv")
+                                                        : basePath + folder + "/Pama2/nor_train.csv")
                                        .setTaskNum(11397)
                                        .setChannel(9)
                                        .setWidth(512)
@@ -120,9 +123,9 @@ public class DataSet {
 
         dataMap.put(DataType.MHe, new Config.Builder()   // kernel 50, width 100  91%   // kernel 30 width 100 96% // 11 class 35 kernel 92%
                                       .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_mhe_low.csv"
-                                                       : basePath + "nor_data/mHealth/nor_train.csv")
+                                                       : basePath + folder + "/mHealth/nor_train.csv")
                                       .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_mhe_low.csv"
-                                                       : basePath + "nor_data/mHealth/nor_test.csv")
+                                                       : basePath + folder + "/mHealth/nor_test.csv")
                                       .setTaskNum(2485)
                                       .setChannel(23)
                                       .setWidth(100)
@@ -135,9 +138,9 @@ public class DataSet {
 
         dataMap.put(DataType.OP, new Config.Builder()
                                      .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_op_low.csv"
-                                                      : basePath + "nor_data/Op/nor_train.csv")
+                                                      : basePath + folder + "/Op/nor_train.csv")
                                      .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_op_low.csv"
-                                                      : basePath + "nor_data/Op/nor_test.csv")
+                                                      : basePath + folder + "/Op/nor_test.csv")
                                      .setTaskNum(15735) // 23 15737
 
                                      .setChannel(77)
@@ -150,9 +153,9 @@ public class DataSet {
                                      .build());
         dataMap.put(DataType.EMG, new Config.Builder()
                                       .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_emg_low.csv"
-                                                       : basePath + "nor_data/EMG/nor_train.csv")
+                                                       : basePath + folder + "/EMG/nor_train.csv")
                                       .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_emg_low.csv"
-                                                       : basePath + "nor_data/EMG/nor_test.csv")
+                                                       : basePath + folder + "/EMG/nor_test.csv")
                                       .setTaskNum(12295)
                                       .setChannel(8)
                                       .setWidth(20)
@@ -164,9 +167,9 @@ public class DataSet {
                                       .build());
         dataMap.put(DataType.FALL, new Config.Builder()
                                        .setDataPath(SystemRun.needLowScale ? lowBasePath + "nor_train_fall_low.csv"
-                                                        : basePath + "nor_data/Fall/nor_train.csv")
+                                                        : basePath + folder + "/Fall/nor_train.csv")
                                        .setTestPath(SystemRun.needLowScale ? lowBasePath + "nor_test_fall_low.csv"
-                                                        : basePath + "nor_data/Fall/nor_test.csv")
+                                                        : basePath + folder + "/Fall/nor_test.csv")
                                        .setTaskNum(7618)
                                        .setChannel(1)
                                        .setWidth(604)

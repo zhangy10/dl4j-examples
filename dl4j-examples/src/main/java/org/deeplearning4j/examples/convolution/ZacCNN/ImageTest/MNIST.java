@@ -72,6 +72,16 @@ public class MNIST {
     static int balanceTrainSize = 1200;
     static int balanceTestSize = 500;
 
+
+    private static List<Long> batchTime = new ArrayList<>();
+    // for test
+    private static DataSetIterator testIterator = null;
+    private static List<String> resultList = new ArrayList<>();
+    private static List<Double> ac = new ArrayList<>();
+    private static List<Double> pr = new ArrayList<>();
+    private static List<Double> re = new ArrayList<>();
+    private static List<Double> f1 = new ArrayList<>();
+
     public static void main(String[] args) throws Exception {
 
         long start = System.currentTimeMillis();
@@ -112,7 +122,7 @@ public class MNIST {
 
         // Ready to load image data
         DataSetIterator trainIter = new RecordReaderDataSetIterator(trainRR, batchSize, 1, outputNum);
-        DataSetIterator testIter = new RecordReaderDataSetIterator(testRR, batchSize, 1, outputNum);
+        testIterator = new RecordReaderDataSetIterator(testRR, batchSize, 1, outputNum);
 
         // Normalization:  pixel values from 0-255 to 0-1 (min-max scaling )
         DataNormalization scaler = new ImagePreProcessingScaler(0, 1);
@@ -120,7 +130,7 @@ public class MNIST {
 
         // Set Normalization Op
         trainIter.setPreProcessor(scaler);
-        testIter.setPreProcessor(scaler); // same normalization for better results
+        testIterator.setPreProcessor(scaler); // same normalization for better results
 
         long process = System.currentTimeMillis();
 
@@ -161,6 +171,15 @@ public class MNIST {
         System.out.println("Preprocessing Total time: " + (process - start) / 1000);
         System.out.println("Train Total time: " + (end - process) / 1000);
 
+        // batch average time
+        int averageTime = 0;
+        for (int i = 0; i < batchTime.size(); i++) {
+            averageTime += batchTime.get(i);
+        }
+        averageTime /= (float) batchTime.size();
+        String log5 = "Average batch time: " + averageTime;
+        System.out.println(log5);
+
         // output: each epoc average loss value
         List<Double> averageList = new ArrayList<>();
         Iterator<Integer> it = epocLoss.keySet().iterator();
@@ -175,12 +194,44 @@ public class MNIST {
             averageList.add(average / size);
         }
 
-        System.out.println(averageList);
+        System.out.println("loss = " + averageList);
 
         // evaluation while training (the score should go down)
         // Evaluate model:
-        Evaluation eval = net.evaluate(testIter);
-        System.out.println(eval.stats());
+//        Evaluation eval = net.evaluate(testIter);
+//        System.out.println(eval.stats());
+
+
+        String m1 = "\nac = " + ac + "\n";
+        System.out.println(m1);
+
+        String m2 = "\npr = " + pr + "\n";
+        System.out.println(m2);
+
+        String m3 = "\nre = " + re + "\n";
+        System.out.println(m3);
+
+        String m4 = "\nf1 = " + f1 + "\n";
+        System.out.println(m4);
+
+        // all test results
+        for (String out : resultList) {
+            System.out.println("\n" + out + "\n");
+        }
+    }
+
+
+    public static void test(MultiLayerNetwork model) {
+        Evaluation eval = model.evaluate(testIterator);
+        String result = "\nEpoc ID: " + epoc + "\n";
+        result += eval.stats() + "\n\n";
+        resultList.add(result);
+
+        ac.add(eval.accuracy());
+        pr.add(eval.precision());
+        re.add(eval.recall());
+        f1.add(eval.f1());
+        System.out.println(result);
     }
 
 
@@ -343,6 +394,9 @@ public class MNIST {
 //                } catch (InterruptedException e) {
 //                    e.printStackTrace();
 //                }
+
+            batchTime.add(time);
+
             List<Double> list = epocLoss.get(epoch);
             if (list == null) {
                 list = new ArrayList<>();
@@ -358,6 +412,7 @@ public class MNIST {
 
         @Override
         public void onEpochEnd(Model model) {
+            test((MultiLayerNetwork) model);
         }
 
         @Override
