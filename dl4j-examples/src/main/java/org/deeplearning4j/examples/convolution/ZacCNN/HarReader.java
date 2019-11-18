@@ -1,18 +1,14 @@
 package org.deeplearning4j.examples.convolution.ZacCNN;
 
-import org.datavec.api.records.Record;
 import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
-import org.datavec.api.split.InputSplit;
 import org.datavec.api.util.ndarray.RecordConverter;
 import org.datavec.api.writable.Writable;
 import org.datavec.api.writable.batch.NDArrayRecordBatch;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.util.ArrayUtil;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
