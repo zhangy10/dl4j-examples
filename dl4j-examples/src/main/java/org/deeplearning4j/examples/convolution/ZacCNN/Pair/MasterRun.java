@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MasterRun {
+
     private int taskNum;
     private DataSet.DataType dataType;
     private MDLModel.Type modelType = MDLModel.Type.LENET1D;
@@ -33,11 +34,13 @@ public class MasterRun {
         this.modelType = modelType;
     }
 
+    private double workingNum = 0.;
+
     public static void main(String[] args) {
         String file = "/Users/zhangyu/Desktop/";
-        MasterRun runner = new MasterRun(1, DataSet.DataType.EMG, file, null);
-        runner.setType(MDLModel.Type.LENET1D);
-//        runner.setType(MDLModel.Type.MOBILENET_1D);
+        MasterRun runner = new MasterRun(1, DataSet.DataType.FALL, file, null);
+//        runner.setType(MDLModel.Type.LENET1D);
+        runner.setType(MDLModel.Type.MOBILENET_1D);
 //        runner.setType(MDLModel.Type.TCN);
         runner.run();
     }
@@ -68,6 +71,7 @@ public class MasterRun {
         // assgin task
         TrainMaster master = null;
         List<TrainMaster> slaveList = new ArrayList<>();
+
         for (int i = 0; i < task; i++) {
             TaskSplit.Pair fragment = list.get(i);
             Config config = DataSet.getNewConfig(type);
@@ -81,9 +85,14 @@ public class MasterRun {
                 slaveList.add(slave);
             }
         }
+
+        // control working number to start task
+        int started = 0;
         master.start();
-        for (TrainMaster t : slaveList) {
-            t.start();
+//        && started < workingNum
+        for (int i = 0; i < slaveList.size(); i++) {
+            slaveList.get(i).start();
+//            started++;
         }
     }
 

@@ -29,14 +29,7 @@ public class SystemRun {
         dataset.add(DataSet.DataType.MHe);
         dataset.add(DataSet.DataType.OP);
         dataset.add(DataSet.DataType.PAMA);
-
-        // for test
-//        dataset.add(DataSet.DataType.TEST);
-//        dataset.add(DataSet.DataType.TEST2);
-//        dataset.add(DataSet.DataType.TEST3);
-//        dataset.add(DataSet.DataType.TEST4);
     }
-
 
     public static DataSet.DataType type = DataSet.DataType.HAR;
     public static int dataIndex = 0;
@@ -49,6 +42,7 @@ public class SystemRun {
 
     public static MDLModel.Type modelType = MDLModel.Type.LENET1D;
     public static boolean isScaleDecay = true;
+    public static boolean isMobileNet = false;
 
     public static void main(String[] args) {
         type = dataset.get(dataIndex);
