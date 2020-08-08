@@ -42,7 +42,7 @@ public class SystemRun {
 
     public static MDLModel.Type modelType = MDLModel.Type.LENET1D;
     public static boolean isScaleDecay = true;
-    public static boolean isMobileNet = false;
+    public static boolean isMobileNet = true;
 
     public static void main(String[] args) {
         type = dataset.get(dataIndex);

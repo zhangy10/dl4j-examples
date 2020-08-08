@@ -65,4 +65,9 @@ public class GradientInfo extends ArrayList {
         }
     }
 
+    public static void clean() {
+        synchronized (gradientW) {
+            gradientW.clear();
+        }
+    }
 }

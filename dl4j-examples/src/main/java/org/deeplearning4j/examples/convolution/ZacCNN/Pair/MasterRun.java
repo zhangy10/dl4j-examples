@@ -34,11 +34,10 @@ public class MasterRun {
         this.modelType = modelType;
     }
 
-    private double workingNum = 0.;
-
     public static void main(String[] args) {
         String file = "/Users/zhangyu/Desktop/";
-        MasterRun runner = new MasterRun(1, DataSet.DataType.FALL, file, null);
+
+        MasterRun runner = new MasterRun(1, DataSet.DataType.EMG, file, null);
 //        runner.setType(MDLModel.Type.LENET1D);
         runner.setType(MDLModel.Type.MOBILENET_1D);
 //        runner.setType(MDLModel.Type.TCN);
@@ -60,8 +59,8 @@ public class MasterRun {
         DataSet.DataType type = dataType;
         int task = taskNum;
 
-        String modelFile = basePath + taskNum + "_" + type + "_model.bin";
-        logPath = basePath + taskNum + "_" + type + "_log.txt";
+        String modelFile = basePath + taskNum + "_" + type + "_" + modelType + "_model.bin";
+        logPath = basePath + taskNum + "_" + type + "_" + modelType + "_log.txt";
 
         // split task
         List<TaskSplit.Pair> list = TaskSplit.getTask(task, DataSet.getConfig(type).getTaskNum());
@@ -87,12 +86,15 @@ public class MasterRun {
         }
 
         // control working number to start task
+        GradientInfo.clean();
         int started = 0;
         master.start();
-//        && started < workingNum
-        for (int i = 0; i < slaveList.size(); i++) {
+        int endNum = slaveList.size();
+        // at least 1 to pair aggregation
+//        int endNum = 0;
+        System.out.println("[Avaliable Task Number]: " + endNum);
+        for (int i = 0; i < endNum; i++) {
             slaveList.get(i).start();
-//            started++;
         }
     }
 

@@ -25,7 +25,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class TrainMaster extends Thread {
 
-//    private boolean isDecay = true;
+    //    private boolean isDecay = true;
     private int id;
 
     private BlockingQueue<Message> getQueue = new LinkedBlockingQueue<>();
@@ -282,7 +282,8 @@ public class TrainMaster extends Thread {
                     // average, but learning rate will be smaller and smaller
                     newP.divi(msgList.size() + 1);
 
-                    if (SystemRun.isScaleDecay && l1gradient > 0) {
+                    if (SystemRun.isScaleDecay) {
+//                        && l1gradient > 0
                         // weight decay and get scale
 //                        newP.muli(0.75);
                         newP.muli(getScale(l1start, l1end, msgList));
@@ -372,7 +373,12 @@ public class TrainMaster extends Thread {
             }
             base = base / (double) (list.size() + 1);
             g = g / (double) (list.size() + 1);
-            double scale = (base - list.size() * g) / base;
+            double scale = 0;
+//            if (g < 0) {
+//                scale = base / start;
+//            } else {
+            scale = Math.abs((base - list.size() * g) / Math.max(base, list.size() * g));
+//            }
             scales.add(scale);
             System.out.println("The scale is: " + scale + " Epoch: " + epoc);
             return scale;
