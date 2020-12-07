@@ -34,14 +34,15 @@ public class DataSet {
         // size: 160M done: good vs image
         dataMap.put(DataType.HAR, new Config.Builder()
 
-                                      .setDataPath(basePath + "/Har/nor_train.csv")
-                                      .setTestPath(basePath + "/Har/nor_test.csv")
+                                      .setDataPath(SystemRun.isIID ? basePath + "/Har/nor_train.csv" : basePath + "/Har/Subject/train")
+                                      .setTestPath(SystemRun.isIID ? basePath + "/Har/nor_test.csv" : basePath + "/Har/Subject/test")
                                       .setTaskNum(7352)
                                       .setChannel(9)
                                       .setWidth(128)
                                       .setNumClass(6)
                                       .setKernel(SystemRun.isMobileNet ? 14 : 64)
                                       .setBatch(batchSize)
+//                                        .setEpoch(1)
                                       .build());
 
         // size: 900M done: good
@@ -58,8 +59,8 @@ public class DataSet {
 
 
         dataMap.put(DataType.MHe, new Config.Builder()   // kernel 50, width 100  91%   // kernel 30 width 100 96% // 11 class 35 kernel 92%
-                                      .setDataPath(basePath + "/mHealth/nor_train.csv")
-                                      .setTestPath(basePath + "/mHealth/nor_test.csv")
+                                      .setDataPath(SystemRun.isIID ? basePath + "/mHealth/nor_train.csv": basePath + "/mHealth/Subject/train")
+                                      .setTestPath(SystemRun.isIID ? basePath + "/mHealth/nor_test.csv": basePath + "/mHealth/Subject/test")
                                       .setTaskNum(2485)
                                       .setChannel(23)
                                       .setWidth(100)
@@ -72,30 +73,42 @@ public class DataSet {
         dataMap.put(DataType.OP, new Config.Builder()
                                      .setDataPath(basePath + "/Op/nor_train.csv")
                                      .setTestPath(basePath + "/Op/nor_test.csv")
+
+                                     // 20 width
                                      .setTaskNum(15735) // 23 15737
+                                     .setKernel(SystemRun.isMobileNet ? 3 : 10)
+                                     .setWidth(23) // 25 - 10 %，23 - 10  89%, 21 -10  0.8964,
+
+                                     // 100 width
+//                                     .setTaskNum(3214)
+//                                     .setWidth(100)
+//                                     .setKernel(SystemRun.isMobileNet ? 12 : 12)
 
                                      .setChannel(77)
-                                     .setWidth(23) // 25 - 10 %，23 - 10  89%, 21 -10  0.8964,
                                      .setNumClass(11)
                                      .setBatch(batchSize)
-                                     .setKernel(SystemRun.isMobileNet ? 3 : 10)
+
                                      .build());
 
         dataMap.put(DataType.EMG, new Config.Builder()
-                                      .setDataPath(basePath + "/EMG/nor_train.csv")
-                                      .setTestPath(basePath + "/EMG/nor_test.csv")
+                                      .setDataPath(SystemRun.isIID ? basePath + "/EMG/nor_train.csv" : basePath + "/EMG/Subject/train")
+                                      .setTestPath(SystemRun.isIID ? basePath + "/EMG/nor_test.csv" : basePath + "/EMG/Subject/test")
                                       // 20 width
+                                      // real v2 size
                                       .setTaskNum(12295)
+                                      // for align to v1
+//                                        .setTaskNum(8563)
                                       .setWidth(20)
                                       .setKernel(SystemRun.isMobileNet ? 3 : 9)
 
-                                      // 100 width
+                                      // 100 width for moiblenet v2, tcn v2
 //                                      .setTaskNum(6443)
 //                                      .setWidth(100)
-//                                      .setKernel(12)
+//                                      .setKernel(SystemRun.isMobileNet ? 12 : 12)
 
                                       .setChannel(8)
                                       .setNumClass(6)
+//            .setEpoch(1)
                                       .setBatch(batchSize)
                                       .build());
 
@@ -110,17 +123,31 @@ public class DataSet {
                                        .setKernel(SystemRun.isMobileNet ? 14 : 42)
                                        .build());
 
+//        dataMap.put(DataType.FINDROID, new Config.Builder()
+//                                           .setDataPath("/Users/zber/Program_dev/Finger_demo/Data/fing_8train_330.csv")
+//                                           .setTestPath("/Users/zber/Program_dev/Finger_demo/Data/fing_20test.csv")
+//                                           .setTaskNum(2640)
+//                                           .setChannel(6)
+//                                           .setWidth(150)
+//                                           .setNumClass(8)
+//                                           .setBatch(batchSize)
+//                                           .setKernel(75)
+//                                           .isNormal(true)
+//                                           .setEpoch(35)
+//                                           .build());
+
+
+        // Test for real case
         dataMap.put(DataType.FINDROID, new Config.Builder()
-                                           .setDataPath("/Users/zber/Program_dev/Finger_demo/Data/fing_8train_330.csv")
-                                           .setTestPath("/Users/zber/Program_dev/Finger_demo/Data/fing_20test.csv")
-                                           .setTaskNum(2640)
+                                           .setDataPath("/Users/zhangyu/Desktop/TON_phone/train/Finhr_data/train/train.csv")
+                                           .setTestPath("/Users/zhangyu/Desktop/TON_phone/train/Finhr_data/test/test_7.csv")
+                                           .setTaskNum(1728)
                                            .setChannel(6)
                                            .setWidth(150)
-                                           .setNumClass(8)
-                                           .setBatch(batchSize)
-                                           .setKernel(75)
-                                           .isNormal(true)
-                                           .setEpoch(35)
+                                           .setNumClass(6)
+                                           .setBatch(64)
+                                           .setKernel(14)
+                                           .setEpoch(20)
                                            .build());
 
     }

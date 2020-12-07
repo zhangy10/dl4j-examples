@@ -66,6 +66,16 @@ public class Config implements Cloneable {
         return this;
     }
 
+    public Config setDataPath(String path) {
+        this.dataPath = path;
+        return this;
+    }
+
+    public Config setTestPath(String path) {
+        this.testPath = path;
+        return this;
+    }
+
     public File getFile() throws Exception {
         return new File(dataPath);
     }

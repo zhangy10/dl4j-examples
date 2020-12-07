@@ -301,7 +301,7 @@ public class TrainMaster extends Thread {
 
 
                 // fixed bug: if not send message back to slave, the memory will not be relesaed
-                Message newMsg = new Message();
+                Message newMsg = new Message(id);
                 newMsg.parameters = newP;
                 int i = 0;
                 for (BlockingQueue queue : broadcast) {
@@ -310,7 +310,7 @@ public class TrainMaster extends Thread {
                     System.out.println("master sending to " + i);
                 }
             } else {
-                Message message = new Message();
+                Message message = new Message(id);
 
                 // if linked, need frist get message from sub node, then send to root
                 if (isLinked && !isEnd) {
@@ -457,7 +457,7 @@ public class TrainMaster extends Thread {
             MultiLayerConfiguration conf = MDLModel.getNetwork(modelType, settings);
 
             // send conf to others
-            Message message = new Message();
+            Message message = new Message(id);
             message.confJosn = conf.toJson();
 
             model = new MultiLayerNetwork(conf);

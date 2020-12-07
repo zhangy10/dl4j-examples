@@ -1,5 +1,6 @@
 package org.deeplearning4j.examples.convolution.ZacCNN.Pair;
 
+import org.deeplearning4j.examples.convolution.ZacCNN.Pair.Go.GoRun;
 import org.deeplearning4j.examples.convolution.ZacCNN.Pair.Model.MDLModel;
 import org.deeplearning4j.examples.convolution.ZacCNN.SplitListener;
 
@@ -8,7 +9,6 @@ import java.util.List;
 
 public class SystemRun {
 
-    public static SyncPolicy policy = SyncPolicy.EPOC;
     public static ModelLayer layerConfig = ModelLayer.ONE;
 
     public static boolean needLowScale = false;
@@ -35,14 +35,20 @@ public class SystemRun {
     public static int dataIndex = 0;
 
     public static String dataPath = "/Users/zhangyu/GoogleDrive/PHD/All_Papers/MDLdroid/Submission/Final_Data/final_data";
-    public static String outputPath = "/Users/zhangyu/Desktop/";
+    public static String outputPath = "/Users/zhangyu/Desktop/test/";
 
     public static int startTaskNum = 1;
     public static int maxTaskNum = 9;
 
+    // IID test or NonIID test
+    public static boolean isIID = true;
+    // set different sync policy, e.g., Bernoulli, EPOC
+    public static SyncPolicy policy = SyncPolicy.EPOC;
     public static MDLModel.Type modelType = MDLModel.Type.LENET1D;
-    public static boolean isScaleDecay = true;
-    public static boolean isMobileNet = true;
+    // switch v1 to v2
+    public static boolean isScaleDecay = false;
+    // switch to mobilenet or tcn
+    public static boolean isMobileNet = false;
 
     public static void main(String[] args) {
         type = dataset.get(dataIndex);
@@ -50,13 +56,12 @@ public class SystemRun {
         next(startTaskNum);
     }
 
-    private static void next(int index) {
+    protected static void next(int index) {
 //        if (isMaster) {
-        new MasterRun(index, type, outputPath, donelistener, modelType).run();
-//        }
-//        else {
-//            new LinkedSplit(index, type, basePath, donelistener).run();
-//        }
+        // v1, v2
+//        new MainRun(index, type, outputPath, donelistener, modelType).run();
+        // GoSGD
+        new GoRun(index, type, outputPath, donelistener, modelType).run();
     }
 
     private static SplitListener donelistener = new SplitListener() {
@@ -84,7 +89,8 @@ public class SystemRun {
         HALF_EPOC(2),
         // TODO issues...
 //        QUART_EPOC(4),
-        BATCH;
+        BATCH,
+        Bernoulli;
 
         private int syncNum = 0;
 
