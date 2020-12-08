@@ -21,7 +21,7 @@ public class NonIIDRun extends SystemRun {
     public static int seed = 123;
     public static List<Integer> pastSeed = new ArrayList<>();
 
-    public static void main(String[] args) {
+    public NonIIDRun() {
         isIID = false;
         dataset.clear();
         dataset.add(DataSet.DataType.EMG);
@@ -33,8 +33,12 @@ public class NonIIDRun extends SystemRun {
         next(state);
     }
 
+    public static void main(String[] args) {
+        new NonIIDRun();
+    }
+
     private static void updateSeed() {
-        while(true) {
+        while (true) {
             seed = new Random().nextInt(bound);
             if (!pastSeed.contains(seed)) {
                 pastSeed.add(seed);
@@ -87,14 +91,21 @@ public class NonIIDRun extends SystemRun {
                     updateSeed();
                     next(state);
                 } else {
-                    // switch dataset
+                    // switch tasknum
+                    taskNum++;
                     time = 0;
-                    dataIndex++;
-                    if (dataIndex < dataset.size()) {
-                        // will start to next dataset
-                        type = dataset.get(dataIndex);
+                    if (taskNum <= maxTaskNum) {
                         updateSeed();
                         next(state);
+                    } else {
+                        // switch dataset
+                        dataIndex++;
+                        if (dataIndex < dataset.size()) {
+                            // will start to next dataset
+                            type = dataset.get(dataIndex);
+                            updateSeed();
+                            next(state);
+                        }
                     }
                 }
             }
