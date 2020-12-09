@@ -1,6 +1,6 @@
 package org.deeplearning4j.examples.convolution.ZacCNN.Pair.Go;
 
-public class NonIIDRunAll extends NonIIDRun {
+public class NonIIDRunAll extends NonIIDRun{
 
     public static void main(String[] args) {
 
@@ -9,6 +9,7 @@ public class NonIIDRunAll extends NonIIDRun {
         testTimes = 1;
         // start from 2
         taskNum = 2;
+        isTaskStable = false;
 
         new NonIIDRunAll();
     }

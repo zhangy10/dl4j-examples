@@ -12,6 +12,7 @@ public class NonIIDRun extends SystemRun {
 
     public static int bound = 100;
     public static int taskNum = 9;
+    public static boolean isTaskStable = true;
 
     public static int testTimes = 5;
     public static int taskState = 4;
@@ -23,9 +24,10 @@ public class NonIIDRun extends SystemRun {
 
     public NonIIDRun() {
         isIID = false;
+
         dataset.clear();
         dataset.add(DataSet.DataType.EMG);
-//        dataset.add(DataSet.DataType.HAR);
+        dataset.add(DataSet.DataType.HAR);
 //        dataset.add(DataSet.DataType.MHe);
 
         type = dataset.get(dataIndex);
@@ -84,20 +86,26 @@ public class NonIIDRun extends SystemRun {
                 // switch state
                 next(state);
             } else {
-                time++;
                 state = 0;
+                time++;
                 if (time < testTimes) {
                     // switch time
                     updateSeed();
                     next(state);
                 } else {
-                    // switch tasknum
-                    taskNum++;
                     time = 0;
-                    if (taskNum <= maxTaskNum) {
+                    if (!isTaskStable) {
+                        // switch tasknum
+                        taskNum++;
+                    }
+                    if (!isTaskStable && taskNum <= maxTaskNum) {
                         updateSeed();
                         next(state);
                     } else {
+                        if (!isTaskStable) {
+                            // for non iid condition, starting from 2
+                            taskNum = 2;
+                        }
                         // switch dataset
                         dataIndex++;
                         if (dataIndex < dataset.size()) {
