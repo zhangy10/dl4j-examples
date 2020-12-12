@@ -29,6 +29,7 @@ public class TrainMain extends BaseTrain {
     public boolean isEnd = false;
 
     private List<Double> scales = new ArrayList<>();
+    private List<Double> changes = new ArrayList<>();
 
     public TrainMain(BlockingQueue<Message> sendQueue, int id, Config settings, SplitListener splitListener, String modelFile) {
         super(sendQueue, id, settings, splitListener, modelFile);
@@ -90,6 +91,8 @@ public class TrainMain extends BaseTrain {
         double l1end = 0;
 
         double l1gradient = 0;
+
+        double lastChange = 0;
 
         @Override
         public void onEpochStart(Model model) {
@@ -299,8 +302,23 @@ public class TrainMain extends BaseTrain {
 //            scale = Math.abs((base - otherG) / Math.max(base, otherG));
 
             // ver2
-            scale = Math.abs((start - (list.size() + 1) * g) / Math.max(start, (list.size() + 1) * g));
+            double change = Math.abs(start - (list.size() + 1) * g);
+            System.out.println("\n\n [[[[[-------------------> Change: " + change + ", LastChange: " + lastChange + " <--------------------]]]]] \n\n");
+            if (SystemRun.isMobileNet) {
+                lastChange = change;
+                scale = Math.abs(change / Math.max(start, (list.size() + 1) * g));
+            } else {
+                // minimize difference
+                if (lastChange == 0 || lastChange > change) {
+                    lastChange = change;
+                    scale = Math.abs(change / Math.max(start, (list.size() + 1) * g));
+                } else {
+                    // no impact
+                    scale = 1;
+                }
+            }
 
+            changes.add(lastChange);
             scales.add(scale);
             System.out.println("-----------------\n\nThe scale is: " + scale + " Epoch: " + epoc + "\n\n-----------------");
             return scale;
@@ -384,6 +402,11 @@ public class TrainMain extends BaseTrain {
     protected void afterTrain(String output, Model model) {
         // train done
         if (isMaster) {
+            // add changes
+            String changeList = "Change = " + changes.toString() + "\n\n";
+            output += changeList;
+            System.out.println(changeList);
+
             // add scales
             String scaleList = "scale = " + scales.toString() + "\n\n";
             output += scaleList;

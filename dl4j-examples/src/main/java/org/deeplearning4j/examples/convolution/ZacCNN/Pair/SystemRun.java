@@ -41,12 +41,12 @@ public class SystemRun {
     public static int maxTaskNum = 9;
 
     // IID test or NonIID test
-    public static boolean isIID = true;
+    public static boolean isIID = false;
     // set different sync policy, e.g., Bernoulli, EPOC
     public static SyncPolicy policy = SyncPolicy.EPOC;
     public static MDLModel.Type modelType = MDLModel.Type.LENET1D;
     // switch v1 to v2
-    public static boolean isScaleDecay = false;
+    public static boolean isScaleDecay = true;
     // switch to mobilenet or tcn
     public static boolean isMobileNet = false;
 
