@@ -32,6 +32,19 @@ public abstract class BaseRun {
     private static final String CSV = ".csv";
     private static final String SPLIT = "_";
 
+    // black list, exclude subjects
+    public static List<Integer> harBlackList = new ArrayList<>(Arrays.asList(8, 15, 27, 16, 12, 13, 4, 20));
+    public static List<Integer> emgBlackList = new ArrayList<>(Arrays.asList(21));
+    public static List<Integer> mheBlackList = new ArrayList<>(Arrays.asList(7));
+
+    public static Map<DataSet.DataType, List<Integer>> blackList = new HashMap<>();
+
+    static {
+        blackList.put(DataSet.DataType.HAR, harBlackList);
+        blackList.put(DataSet.DataType.EMG, emgBlackList);
+        blackList.put(DataSet.DataType.MHe, mheBlackList);
+    }
+
     public BaseRun(int taskNum, DataSet.DataType dataType, String basePath, SplitListener donelistener) {
         this(taskNum, dataType, basePath, donelistener, MDLModel.Type.LENET1D);
     }
@@ -131,10 +144,12 @@ public abstract class BaseRun {
         // Random select task number of index
         Random r = new Random(seed);
         List<Integer> index = new ArrayList<>();
+        List<Integer> black = blackList.get(dataType);
+
         int num = taskNum;
         while (num > 0) {
             int next = r.nextInt(trainDir.size());
-            if (!index.contains(next)) {
+            if (!index.contains(next) && !black.contains(next)) {
                 index.add(next);
                 num--;
             }
